@@ -30,6 +30,7 @@ async def callback30(context: ContextTypes.DEFAULT_TYPE):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Use o comando /inscrever HH:MM 'Mensagem' para adicionar um lembrete \n"
+    "/listar para ver seus lembretes"
     "/limpar para apagar todos os lembretes")
 
 async def inscrever(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -72,11 +73,30 @@ async def inscrever(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(f"✅ Inscrição confirmada! Você receberá '{mensagem}' todo dia às {horario}.")
 
-async def limpar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update.message.chat_id)
+async def limpar(update: Update, _):
     cursor.execute("DELETE FROM users WHERE user_id = ?", (update.message.chat_id,))
     conn.commit()
     await update.message.reply_text("Todos os seus alertas foram removidos.")
+
+async def listar(update: Update, _):
+    cursor.execute("SELECT horario, mensagem FROM users where user_id = ?", (update.message.chat_id,))
+    horarios = cursor.fetchall()
+    if len(horarios) == 0:
+        await update.message.reply_text("Sem alertas registrados")
+    else:
+        mensagem = ""
+        for horario in horarios:
+            mensagem += f"{horario[0]} - {horario[1]}\n"
+
+        await update.message.reply_text(mensagem)
+
+async def limite(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) != 1:
+        await update.message.reply_text("Parâmetros inválidos. Exemplo (/limite 3)")
+    valor = context.args[0]
+    cursor.execute("INSERT OR REPLACE INTO config VALUES (?, ?)", ("limite", valor))
+    conn.commit()
+    await update.message.reply_text(f"Limite ajustado para {valor}.")
 
 if __name__ == '__main__':
     application = ApplicationBuilder().token(os.getenv("BOT_TOKEN")).build()
@@ -86,10 +106,14 @@ if __name__ == '__main__':
     start_handler = CommandHandler('start', start)
     inscrever_handler = CommandHandler('inscrever', inscrever)
     limpar_handler = CommandHandler('limpar', limpar)
+    listar_handler = CommandHandler('listar', listar)
+    limite_handler = CommandHandler('limite', limite)
     message_handler = MessageHandler(filters.TEXT &  (~filters.COMMAND), start)
     application.add_handler(start_handler)
     application.add_handler(inscrever_handler)
     application.add_handler(limpar_handler)
     application.add_handler(message_handler)
+    application.add_handler(listar_handler)
+    application.add_handler(limite_handler)
 
     application.run_polling()
