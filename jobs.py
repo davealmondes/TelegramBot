@@ -1,13 +1,13 @@
 from datetime import datetime
+from typing import Any
 from database import Database
 
 db = Database()
 
-async def callback30(context):
-    now = datetime.now().strftime("%H:%M")
-    day = datetime.now().strftime("%Y-%m-%d")
-    reminders = db.get_reminders_for_time(now, day)
+async def callback30(context :Any):
+    now :str = datetime.now().strftime("%H:%M")
+    reminders: list[Any] = db.get_lembretes_a_enviar(now)
 
-    for user_id, mensagem in reminders:
-        await context.bot.send_message(chat_id=user_id, text=mensagem)
-        db.update_last_sent(user_id, now, day)
+    for id, usuario_id, mensagem in reminders:
+        await context.bot.send_message(chat_id=usuario_id, text=mensagem)
+        db.update_enviado_em(id)
