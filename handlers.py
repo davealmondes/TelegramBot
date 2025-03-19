@@ -176,7 +176,7 @@ async def limite(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except ValueError:
         await update.message.reply_text("O valor do limite deve ser um número inteiro.")
 
-def limite(admin_id: str):
+def limite(admin_id: int):
     async def limite(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message.chat_id != admin_id:
             await update.message.reply_text("Comando disponível apenas para administradores.")

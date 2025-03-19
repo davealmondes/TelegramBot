@@ -18,7 +18,7 @@ EDIT_CHOOSE, EDIT_FIELD, EDIT_TIME, EDIT_MESSAGE = range(4)
 
 def main():
     token: str = os.getenv("BOT_TOKEN")
-    admin_id: str = os.getenv("BOT_ADMIN_ID")
+    admin_id: int = int(os.getenv("BOT_ADMIN_ID"))
     application = ApplicationBuilder().token(token).build()
 
     job_queue = application.job_queue
