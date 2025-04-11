@@ -23,7 +23,7 @@ jobs:
             echo "🔍 Verificando se já é um repositório Git..."
             if [ ! -d ".git" ]; then
               echo "⚠️ Repositório Git não encontrado. Clonando em diretório temporário..."
-              git clone https://github.com/davealmondes/TelegramBot.git /tmp/temp-clone
+              git clone git@github.com:davealmondes/TelegramBot.git /tmp/temp-clone
               echo "📦 Movendo .git para o diretório atual..."
               mv /tmp/temp-clone/.git ./
               rm -rf /tmp/temp-clone
