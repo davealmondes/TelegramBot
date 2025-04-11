@@ -1,0 +1,31 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main  # Altere para o branch que você usa para deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.SERVER_IP }} << 'EOF'
+          cd /home/ubuntu/telegram-bot
+          git fetch --all
+          git reset --hard origin/main
+          source venv/bin/activate
+          pip install -r requirements.txt
+          sudo systemctl daemon-reload  # Recarrega as configurações do systemd
+          sudo systemctl restart telegram-bot # Reinicia o serviço
+          EOF
