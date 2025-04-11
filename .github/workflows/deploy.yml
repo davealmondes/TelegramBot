@@ -17,28 +17,45 @@ jobs:
           username: 'ubuntu'
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "📁 Acessando diretório do projeto..."
-            cd ~/telegram-bot
+            PROJETO=telegram-bot
+            SERVICO=telegram-bot.service
+            CAMINHO=~/telegram-bot
 
-            echo "🔍 Verificando se já é um repositório Git..."
-            if [ ! -d ".git" ]; then
-              echo "⚠️ Repositório Git não encontrado. Clonando em diretório temporário..."
-              git clone git@github.com:davealmondes/TelegramBot.git /tmp/temp-clone
-              echo "📦 Movendo .git para o diretório atual..."
-              mv /tmp/temp-clone/.git ./
-              rm -rf /tmp/temp-clone
-              echo "🔁 Resetando conteúdo para o branch main..."
-              git reset --hard origin/main
-              echo "✅ Repositório inicializado com sucesso!"
+            echo "🔍 Verificando existência do projeto..."
+            if [ ! -d "$CAMINHO/.git" ]; then
+              echo "⚠️ Projeto não encontrado. Clonando e configurando..."
+
+              rm -rf "$CAMINHO"
+              git clone git@github.com:davealmondes/TelegramBot.git "$CAMINHO"
+
+              cd "$CAMINHO"
+
+              echo "🐍 Criando ambiente virtual..."
+              python3 -m venv venv
+
+              echo "📦 Instalando dependências..."
+              source venv/bin/activate
+              pip install --upgrade pip
+              pip install -r requirements.txt
+
+              echo "🛠️ Instalando e ativando serviço systemd..."
+              sudo cp "$SERVICO" /etc/systemd/system/
+              sudo systemctl daemon-reload
+              sudo systemctl enable "$SERVICO"
+              sudo systemctl start "$SERVICO"
             else
-              echo "🔄 Atualizando repositório..."
+              echo "🔄 Projeto já existe. Atualizando código..."
+              cd "$CAMINHO"
               git fetch
               git reset --hard origin/main
-            fi
 
-            echo "🚀 Reiniciando serviço (caso use systemd ou pm2, adapte aqui)..."
-            # Exemplo com systemd:
-            sudo systemctl daemon-reload
-            sudo systemctl start telegram-bot.service
+              echo "📦 Atualizando dependências..."
+              source venv/bin/activate
+              pip install -r requirements.txt
+
+              echo "🔁 Reiniciando serviço..."
+              sudo systemctl daemon-reload
+              sudo systemctl restart "$SERVICO"
+            fi
 
             echo "✅ Deploy finalizado!"
