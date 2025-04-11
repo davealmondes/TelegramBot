@@ -1,4 +1,4 @@
-name: Deploy to Server
+name: Deploy
 
 on:
   push:
@@ -10,36 +10,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Start SSH agent and add key
-        uses: webfactory/ssh-agent@v0.7.0
+      - name: Acessando servidor via SSH
+        uses: appleboy/ssh-action@v0.1.10
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.SERVER_IP }}
+          username: 'ubuntu'
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "📁 Acessando diretório do projeto..."
+            cd ~/telegram-bot
 
-      - name: Deploy via SSH
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.SERVER_IP }} << 'EOF'
-          
-          echo "📁 Acessando diretório do projeto..."
-          cd /home/ubuntu/telegram-bot || { echo "❌ Diretório não encontrado"; exit 1; }
+            echo "🔍 Verificando se já é um repositório Git..."
+            if [ ! -d ".git" ]; then
+              echo "⚠️ Repositório Git não encontrado. Clonando em diretório temporário..."
+              git clone https://github.com/davealmondes/TelegramBot.git /tmp/temp-clone
+              echo "📦 Movendo .git para o diretório atual..."
+              mv /tmp/temp-clone/.git ./
+              rm -rf /tmp/temp-clone
+              echo "🔁 Resetando conteúdo para o branch main..."
+              git reset --hard origin/main
+              echo "✅ Repositório inicializado com sucesso!"
+            else
+              echo "🔄 Atualizando repositório..."
+              git fetch
+              git reset --hard origin/main
+            fi
 
-          echo "🔄 Atualizando repositório..."
-          git config pull.rebase false
-          git remote set-url origin git@github.com:davealmondes/TelegramBot.git
-          git fetch --all || { echo "❌ git fetch falhou"; exit 1; }
-          git reset --hard origin/main || { echo "❌ git reset falhou"; exit 1; }
+            echo "🚀 Reiniciando serviço (caso use systemd ou pm2, adapte aqui)..."
+            # Exemplo com systemd:
+            sudo systemctl daemon-reload
+            sudo systemctl start telegram-bot.service
 
-          echo "🐍 Ativando ambiente virtual..."
-          source venv/bin/activate || { echo '❌ Falha ao ativar venv'; exit 1; }
-
-          echo "📦 Instalando dependências..."
-          pip install -r requirements.txt || { echo '❌ pip install falhou'; exit 1; }
-
-          echo "🔁 Reiniciando serviço..."
-          sudo systemctl daemon-reload
-          sudo systemctl restart telegram-bot || { echo '❌ Falha ao reiniciar serviço'; exit 1; }
-
-          echo "✅ Deploy finalizado com sucesso."
-          EOF
+            echo "✅ Deploy finalizado!"
