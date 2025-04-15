@@ -40,9 +40,9 @@ jobs:
 
               echo "🔐 Gerando arquivo .env"
               cat <<EOF > .env
-              BOT_TOKEN=${{secrets.BOT_TOKEN}}
-              BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}}
-              EOF
+BOT_TOKEN=${{secrets.BOT_TOKEN}}
+BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}}
+EOF
               chmod 600 .env
 
               echo "🛠️ Instalando e ativando serviço systemd..."
@@ -59,12 +59,12 @@ jobs:
               echo "📦 Atualizando dependências..."
               source venv/bin/activate
               pip install -r requirements.txt
-              
+
               echo "🔐 Gerando arquivo .env"
               cat <<EOF > .env
-              BOT_TOKEN=${{secrets.BOT_TOKEN}}
-              BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}}
-              EOF
+BOT_TOKEN=${{secrets.BOT_TOKEN}}
+BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}}
+EOF
               chmod 600 .env
 
               echo "🔁 Reiniciando serviço..."
