@@ -20,7 +20,7 @@ jobs:
             set -ex
             PROJETO=telegram-bot
             SERVICO=telegram-bot.service
-            CAMINHO=/home/${{ secrets.SERVER_USER }}/telegram-bot
+            CAMINHO=/home/ubuntu/telegram-bot
 
             echo "🔍 Verificando existência do projeto..."
             if [ ! -d "$CAMINHO/.git" ]; then
