@@ -4,11 +4,10 @@ After=network.target
 
 [Service]
 User=ubuntu
-Type=simple
-WorkingDirectory=%h/telegram-bot
-ExecStart=%h/telegram-bot/venv/bin/python3 %h/telegram-bot/main.py
+WorkingDirectory=/home/ubuntu/telegram-bot
+ExecStart=/home/ubuntu/telegram-bot/venv/bin/python3 /home/ubuntu/telegram-bot/main.py
 Restart=always
-EnvironmentFile=%h/telegram-bot/.env
+EnvironmentFile=/home/ubuntu/telegram-bot/.env
 
 StandardOutput=append:/var/log/telegram-bot.log
 StandardError=append:/var/log/telegram-bot_error.log
