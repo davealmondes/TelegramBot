@@ -43,7 +43,8 @@ jobs:
               chmod 600 .env
 
               echo "🛠️ Instalando e ativando serviço systemd..."
-              sudo cp $SERVICO /etc/systemd/system/$SERVICO
+              pwd
+              sudo cp ./$SERVICO /etc/systemd/system/$SERVICO
               sudo systemctl daemon-reload
               sudo systemctl enable "$SERVICO"
               sudo systemctl start "$SERVICO"
@@ -63,7 +64,8 @@ jobs:
               chmod 600 .env
 
               echo "🔁 Reiniciando serviço..."
-              sudo cp $SERVICO /ect/systemd/system/$SERVICO
+              pwd
+              sudo cp ./$SERVICO /ect/systemd/system/$SERVICO
               sudo systemctl daemon-reload
               sudo systemctl restart "$SERVICO"
             fi
