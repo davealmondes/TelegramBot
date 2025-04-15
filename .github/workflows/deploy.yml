@@ -17,7 +17,6 @@ jobs:
           username: ${{ secrets.SERVER_USER}}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e
             PROJETO=telegram-bot
             SERVICO=telegram-bot.service
             CAMINHO=/home/${{ secrets.SERVER_USER }}/telegram-bot
