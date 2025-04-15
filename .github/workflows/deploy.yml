@@ -65,7 +65,7 @@ jobs:
               chmod 600 .env
 
               echo "🔁 Reiniciando serviço..."
-              sudo cp "$SERVICO" /ect/systemd/system/
+              sudo cp "$SERVICO" /etc/systemd/system/
               sudo systemctl daemon-reload
               sudo systemctl restart "$SERVICO"
             fi
