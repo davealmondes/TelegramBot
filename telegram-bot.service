@@ -3,12 +3,11 @@ Description=Telegram Bot
 After=network.target
 
 [Service]
-User=ubuntu
-WorkingDirectory=/home/ubuntu/telegram-bot
-ExecStart=/home/ubuntu/telegram-bot/venv/bin/python3 /home/ubuntu/telegram-bot/main.py
+Type=simple
+WorkingDirectory=%h/telegram-bot
+ExecStart=%h/telegram-bot/venv/bin/python3 %h/telegram-bot/main.py
 Restart=always
-Environment="BOT_TOKEN=7971422085:AAGvuU42F5aaxr1akHMDXUv3kQZAHUMxkYc"
-Environment="BOT_ADMIN_ID=969891588"
+EnvironmentFile=%h/telegram-bot/.env
 
 StandardOutput=append:/var/log/telegram-bot.log
 StandardError=append:/var/log/telegram-bot_error.log

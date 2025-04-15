@@ -14,7 +14,7 @@ jobs:
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.SERVER_IP }}
-          username: 'ubuntu'
+          username: ${{ secrets.SERVER_USER}}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             PROJETO=telegram-bot
@@ -38,6 +38,13 @@ jobs:
               pip install --upgrade pip
               pip install -r requirements.txt
 
+              echo "🔐 Gerando arquivo .env"
+              cat <<EOF > .env
+              BOT_TOKEN=${{secrets.BOT_TOKEN}}
+              BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}}
+              EOF
+              chmod 600 .env
+
               echo "🛠️ Instalando e ativando serviço systemd..."
               sudo cp "$SERVICO" /etc/systemd/system/
               sudo systemctl daemon-reload
@@ -52,8 +59,16 @@ jobs:
               echo "📦 Atualizando dependências..."
               source venv/bin/activate
               pip install -r requirements.txt
+              
+              echo "🔐 Gerando arquivo .env"
+              cat <<EOF > .env
+              BOT_TOKEN=${{secrets.BOT_TOKEN}}
+              BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}}
+              EOF
+              chmod 600 .env
 
               echo "🔁 Reiniciando serviço..."
+              sudo cp "$SERVICO" /ect/systemd/system/
               sudo systemctl daemon-reload
               sudo systemctl restart "$SERVICO"
             fi
