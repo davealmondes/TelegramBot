@@ -17,13 +17,12 @@ jobs:
           username: ${{ secrets.SERVER_USER}}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -ex
             PROJETO=telegram-bot
             SERVICO=telegram-bot.service
-            CAMINHO=/home/ubuntu/telegram-bot
+            CAMINHO=~/telegram-bot
 
             echo "🔍 Verificando existência do projeto..."
-            if [ ! -d "~telegram-bot/.git" ]; then
+            if [ ! -d "$CAMINHO/.git" ]; then
               echo "⚠️ Projeto não encontrado. Clonando e configurando..."
 
               rm -rf "$CAMINHO"
