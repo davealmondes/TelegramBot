@@ -23,7 +23,7 @@ jobs:
             CAMINHO=/home/ubuntu/telegram-bot
 
             echo "🔍 Verificando existência do projeto..."
-            if [ ! -d "$CAMINHO/.git" ]; then
+            if [ ! -d "~telegram-bot/.git" ]; then
               echo "⚠️ Projeto não encontrado. Clonando e configurando..."
 
               rm -rf "$CAMINHO"
