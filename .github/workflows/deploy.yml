@@ -44,7 +44,7 @@ jobs:
 
               echo "🛠️ Instalando e ativando serviço systemd..."
               pwd
-              sudo cp ./$SERVICO /etc/systemd/system/$SERVICO
+              sudo cp $SERVICO /etc/systemd/system/$SERVICO
               sudo systemctl daemon-reload
               sudo systemctl enable "$SERVICO"
               sudo systemctl start "$SERVICO"
@@ -65,7 +65,7 @@ jobs:
 
               echo "🔁 Reiniciando serviço..."
               pwd
-              sudo cp ./$SERVICO /ect/systemd/system/$SERVICO
+              sudo cp $SERVICO /ect/systemd/system/$SERVICO
               sudo systemctl daemon-reload
               sudo systemctl restart "$SERVICO"
             fi
