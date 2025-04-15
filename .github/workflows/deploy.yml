@@ -48,7 +48,8 @@ jobs:
               sudo systemctl daemon-reload
               sudo systemctl enable "$SERVICO"
               sudo systemctl start "$SERVICO"
-            else
+            fi
+            if [ -d "$CAMINHO/.git" ]; then
               echo "🔄 Projeto já existe. Atualizando código..."
               cd "$CAMINHO"
               git fetch
