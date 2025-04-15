@@ -39,10 +39,7 @@ jobs:
               pip install -r requirements.txt
 
               echo "🔐 Gerando arquivo .env"
-              cat <<EOF > .env
-BOT_TOKEN=${{secrets.BOT_TOKEN}}
-BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}}
-EOF
+              echo -e "BOT_TOKEN=${{secrets.BOT_TOKEN}}\nBOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}} > .env
               chmod 600 .env
 
               echo "🛠️ Instalando e ativando serviço systemd..."
@@ -61,10 +58,7 @@ EOF
               pip install -r requirements.txt
 
               echo "🔐 Gerando arquivo .env"
-              cat <<EOF > .env
-BOT_TOKEN=${{secrets.BOT_TOKEN}}
-BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}}
-EOF
+              echo -e "BOT_TOKEN=${{secrets.BOT_TOKEN}}\nBOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}} > .env
               chmod 600 .env
 
               echo "🔁 Reiniciando serviço..."
