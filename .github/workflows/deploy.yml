@@ -19,7 +19,7 @@ jobs:
           script: |
             PROJETO=telegram-bot
             SERVICO=telegram-bot.service
-            CAMINHO=~/telegram-bot
+            CAMINHO=/home/${{ secrets.SERVER_USER }}telegram-bot
 
             echo "🔍 Verificando existência do projeto..."
             if [ ! -d "$CAMINHO/.git" ]; then
