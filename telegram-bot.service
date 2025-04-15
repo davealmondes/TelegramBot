@@ -3,6 +3,7 @@ Description=Telegram Bot
 After=network.target
 
 [Service]
+User=ubuntu
 Type=simple
 WorkingDirectory=%h/telegram-bot
 ExecStart=%h/telegram-bot/venv/bin/python3 %h/telegram-bot/main.py
