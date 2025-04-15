@@ -39,11 +39,13 @@ jobs:
               pip install -r requirements.txt
 
               echo "🔐 Gerando arquivo .env"
-              echo -e "BOT_TOKEN=${{secrets.BOT_TOKEN}}\nBOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}} > .env
+              echo BOT_TOKEN=${{secrets.BOT_TOKEN}} > .env
+              echo BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}} >> .env
               chmod 600 .env
 
               echo "🛠️ Instalando e ativando serviço systemd..."
-              sudo cp telegram-bot.service /etc/systemd/system/
+              pwd
+              sudo cp $SERVICO /etc/systemd/system/
               sudo systemctl daemon-reload
               sudo systemctl enable "$SERVICO"
               sudo systemctl start "$SERVICO"
@@ -59,11 +61,13 @@ jobs:
               pip install -r requirements.txt
 
               echo "🔐 Gerando arquivo .env"
-              echo -e "BOT_TOKEN=${{secrets.BOT_TOKEN}}\nBOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}} > .env
+              echo BOT_TOKEN=${{secrets.BOT_TOKEN}} > .env
+              echo BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}} >> .env
               chmod 600 .env
 
               echo "🔁 Reiniciando serviço..."
-              sudo cp telegram-bot.service /ect/systemd/system/
+              pwd
+              sudo cp $SERVICO /ect/systemd/system/
               sudo systemctl daemon-reload
               sudo systemctl restart "$SERVICO"
             fi
