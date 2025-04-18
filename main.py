@@ -108,7 +108,20 @@ def main():
 
     application.add_handler(CommandHandler("limite", limite(admin_id)))
     application.add_handler(conv_handler)
-    application.run_polling()
+
+    application.bot.set_webhook(
+        url="https://cb8d-191-13-124-153.ngrok-free.app/webhook",
+        secret_token=os.getenv("WEBHOOK_SECRET_TOKEN"),
+    )
+
+    application.run_webhook(
+        listen='0.0.0.0',
+        port=8000,
+        url_path='webhook',
+        secret_token=os.getenv("WEBHOOK_SECRET_TOKEN"),
+        webhook_url='https://cb8d-191-13-124-153.ngrok-free.app/webhook'
+    )
+    
 
 if __name__ == '__main__':
     main()

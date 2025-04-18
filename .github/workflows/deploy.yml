@@ -62,6 +62,7 @@ jobs:
               echo "🔐 Gerando arquivo .env"
               echo BOT_TOKEN=${{secrets.BOT_TOKEN}} > .env
               echo BOT_ADMIN_ID=${{secrets.BOT_ADMIN_ID}} >> .env
+              echo WEBHOOK_SECRET_TOKEN=${{secrets.WEBHOOK_SECRET_TOKEN}} >> .env
               chmod 600 .env
 
               echo "🔁 Reiniciando serviço..."
