@@ -110,7 +110,7 @@ def main():
     application.add_handler(conv_handler)
 
     application.bot.set_webhook(
-        url="https://cb8d-191-13-124-153.ngrok-free.app/webhook",
+        url=OS.getenv("WEBHOOK_URL"),
         secret_token=os.getenv("WEBHOOK_SECRET_TOKEN"),
     )
 
@@ -119,7 +119,7 @@ def main():
         port=8000,
         url_path='webhook',
         secret_token=os.getenv("WEBHOOK_SECRET_TOKEN"),
-        webhook_url='https://cb8d-191-13-124-153.ngrok-free.app/webhook'
+        webhook_url=os.getenv("WEBHOOK_URL")
     )
     
 
