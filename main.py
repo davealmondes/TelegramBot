@@ -110,7 +110,7 @@ def main():
     application.add_handler(conv_handler)
 
     application.bot.set_webhook(
-        url=OS.getenv("WEBHOOK_URL"),
+        url=os.getenv("WEBHOOK_URL"),
         secret_token=os.getenv("WEBHOOK_SECRET_TOKEN"),
     )
 
