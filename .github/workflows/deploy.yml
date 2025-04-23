@@ -69,7 +69,7 @@ jobs:
               echo "🔁 Reiniciando serviço..."
               sudo cp "$SERVICO" /etc/systemd/system/
               sudo systemctl daemon-reload
-              sudo systemctl restart "$SERVICO"
+              sudo systemctl reload "$SERVICO"
             fi
 
             echo "✅ Deploy finalizado!"

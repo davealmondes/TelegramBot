@@ -4,10 +4,12 @@ from telegram.ext import ConversationHandler
 (
     SELECAO_MENU,        # Tela inicial
     MENU_LEMBRETES,      # Entrada do menu de lembretes
+    MENU_PONTO,          # Entrada do menu de ponto
     SELECAO_MENU_LEMBRETE,  # Submenu de lembretes
+    SELECAO_MENU_PONTO,  # Submenu de ponto
     LISTAR_LEMBRETES,    # Lista de lembretes
     LIMPAR_LEMBRETES     # Apagar todos
-) = map(chr, range(5))
+) = map(chr, range(7))
 
 # Operações com lembretes
 (
@@ -15,8 +17,11 @@ from telegram.ext import ConversationHandler
     EDITAR_LEMBRETE,     # Editar lembrete existente
     SELECIONANDO_CAMPO,  # Escolhendo campo (horário, mensagem)
     CANCELAR,            # Cancelamento de operação
-    EXCLUIR_LEMBRETE     # Apagar um lembrete
-) = map(chr, range(5, 10))
+    EXCLUIR_LEMBRETE,     # Apagar um lembrete
+    GERAR_PLANILHA,     # Menu de geração de planilha
+    ACAO_PLANILHA,     # Escolha de ação para menu de geração de planilha
+    BAIXAR_PLANILHA,     # Menu de download de planilha
+) = map(chr, range(7, 15))
 
 # Marcador de fim de conversa
 END = ConversationHandler.END
@@ -30,5 +35,6 @@ END = ConversationHandler.END
     MENSAGEM,            # Campo "mensagem"
     CAMPOS,              # Dicionário dos campos sendo editados
     CAMPO_SELECIONADO,   # Campo que está sendo editado no momento
-    TEXTO                # Texto temporário a ser exibido em telas
-) = map(chr, range(10, 18))
+    TEXTO,               # Texto temporário a ser exibido em telas
+    GERAR,               # Gerar planilha
+) = map(chr, range(15, 24))

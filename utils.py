@@ -1,4 +1,6 @@
+from datetime import datetime, timedelta
 import re
+import numpy as np
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 # ---- MENSAGENS PADRÃO ----
@@ -29,3 +31,13 @@ def parse_horario(texto: str) -> str | None:
         if 0 <= hora < 24 and 0 <= minuto < 60:
             return f"{hora:02d}:{minuto:02d}"
     return None
+
+def random_entrada(data) -> datetime:
+    base: datetime = datetime.combine(data, datetime.min.time()) + timedelta(hours=8)
+    aleatorio: datetime = base + timedelta(seconds=np.random.randint(0, 30*60))
+    return aleatorio
+
+def random_saida(entrada: datetime, carga_horaria = 9, min: int = 15, max: int = 60) -> datetime:
+    extra_segundos = np.random.randint(min * 60, (max + 1) * 60)
+    saida_dt  = entrada + timedelta(hours=carga_horaria, seconds=extra_segundos)
+    return saida_dt

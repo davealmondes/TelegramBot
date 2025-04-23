@@ -26,6 +26,7 @@ from lembretes_handler import (
     listar,
     valor_campo
 )
+from ponto_handler import baixar, gerar, gerar_planilha, menu_ponto, menu_ponto_superior
 
 def limite(admin_id: int):
     async def handler(update, context):
@@ -48,8 +49,7 @@ def limite(admin_id: int):
 
     return handler
 
-
-def main():
+def main() -> None:
     filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
     logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -100,28 +100,58 @@ def main():
         map_to_parent={END: SELECAO_MENU}
     )
 
+    gerar_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(gerar_planilha, pattern=f"^{GERAR_PLANILHA}$")],
+        states={
+            ACAO_PLANILHA: [
+                CallbackQueryHandler(gerar, pattern=f"^{GERAR}$"),
+            ]
+        },
+        fallbacks=[
+            CommandHandler("cancelar", encerrar),
+            CallbackQueryHandler(menu_ponto_superior, pattern=f"^{END}$")
+        ],
+        map_to_parent={
+            END: SELECAO_MENU_PONTO,
+        }
+    )
+
+    ponto_selecoes = [
+        gerar_conv,
+        CallbackQueryHandler(baixar, pattern=f"^{BAIXAR_PLANILHA}$"),
+
+    ]
+
+    ponto_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(menu_ponto, pattern=f"^{MENU_PONTO}$")],
+        states={SELECAO_MENU_PONTO: ponto_selecoes},
+        fallbacks=[CallbackQueryHandler(voltar, pattern=f"^{END}$")],
+        map_to_parent={END: SELECAO_MENU}
+    )
+
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
-        states={SELECAO_MENU: [lembretes_conv, add_conv, CallbackQueryHandler(encerrar, pattern=f"^{END}$")]},
+        states={SELECAO_MENU: [lembretes_conv, ponto_conv, add_conv, CallbackQueryHandler(encerrar, pattern=f"^{END}$")]},
         fallbacks=[CommandHandler("cancelar", encerrar)]
     )
 
     application.add_handler(CommandHandler("limite", limite(admin_id)))
     application.add_handler(conv_handler)
 
-    application.bot.set_webhook(
-        url=os.getenv("WEBHOOK_URL"),
-        secret_token=os.getenv("WEBHOOK_SECRET_TOKEN"),
-    )
-
+    webhook_url: str = os.getenv("WEBHOOK_URL")
+    webhook_secret_token: str = os.getenv("WEBHOOK_SECRET_TOKEN")
+   
+    # Run the webhook server in a separate thread
     application.run_webhook(
         listen='0.0.0.0',
         port=8000,
         url_path='webhook',
-        secret_token=os.getenv("WEBHOOK_SECRET_TOKEN"),
-        webhook_url=os.getenv("WEBHOOK_URL")
+        secret_token=webhook_secret_token,
+        webhook_url=webhook_url,
     )
-    
 
 if __name__ == '__main__':
     main()
+
+
+    

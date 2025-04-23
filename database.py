@@ -2,6 +2,8 @@ import sqlite3
 from typing import Any
 from datetime import datetime
 
+import pandas as pd
+
 class Database:
     def __init__(self, db_name: str = "usuarios.db"):
         self.conn = sqlite3.connect(db_name, check_same_thread=False)
@@ -35,6 +37,16 @@ class Database:
             CREATE TABLE IF NOT EXISTS config (
                 key TEXT PRIMARY KEY,
                 value TEXT
+            )
+        """)
+
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ponto(
+                data TEXT PRIMARY KEY,
+                dia INTEGER,
+                entrada TEXT,
+                saida TEXT,
+                feriado TEXT
             )
         """)
 
@@ -110,6 +122,24 @@ class Database:
 
     def set_limite(self, limite: int) -> None:
         self.cursor.execute("INSERT OR REPLACE INTO config VALUES (?, ?)", ("limite", str(limite)))
+        self.conn.commit()
+
+    def get_data_pontos(self, year: int|None = None, month: int|None = None) -> list[Any]:
+        ano = year if year else datetime.today().year
+        mes = month if month else datetime.today().month
+        self.cursor.execute("SELECT data FROM ponto WHERE strftime('%Y-%m', data) = ?", (f"{ano}-{mes:02}",))
+        return self.cursor.fetchall()
+    
+    def get_pontos(self) -> pd.DataFrame:
+        return pd.read_sql_query("""
+        SELECT * FROM ponto 
+        WHERE strftime('%Y-%m', data) = ? 
+        order by dia""", self.conn, params=(f"{datetime.today().year}-{datetime.today().month:02}",))
+    
+    def insert_ponto(self, data: str, dia: int, entrada: str, saida: str, feriado: str) -> None:
+        self.cursor.execute("""
+            INSERT INTO ponto (data, dia, entrada, saida, feriado) VALUES (?, ?, ?, ?, ?)
+        """, (data, dia, entrada, saida, feriado))
         self.conn.commit()
 
     def close(self):

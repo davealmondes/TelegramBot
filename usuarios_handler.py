@@ -18,6 +18,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     buttons = [
         [InlineKeyboardButton(text="Lembretes", callback_data=str(MENU_LEMBRETES))],
+        [InlineKeyboardButton(text="Ponto", callback_data=str(MENU_PONTO))],
         [InlineKeyboardButton(text="Encerrar", callback_data=str(END))]
     ]
     keyboard = InlineKeyboardMarkup(buttons)
