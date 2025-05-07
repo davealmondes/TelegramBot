@@ -13,13 +13,13 @@ from telegram.ext import ConversationHandler
 
 # Operações com lembretes
 (
-    ADICIONAR_LEMBRETE,  # Inicia criação de novo lembrete
-    EDITAR_LEMBRETE,     # Editar lembrete existente
+    ADICIONAR,           # Inicia criação de novo registro
+    EDITAR,              # Editar registro existente
     SELECIONANDO_CAMPO,  # Escolhendo campo (horário, mensagem)
     CANCELAR,            # Cancelamento de operação
-    EXCLUIR_LEMBRETE,     # Apagar um lembrete
-    GERAR_PLANILHA,     # Menu de geração de planilha
-    ACAO_PLANILHA,     # Escolha de ação para menu de geração de planilha
+    EXCLUIR,             # Apagar um registro
+    GERAR_PLANILHA,      # Menu de geração de planilha
+    ACAO_PLANILHA,       # Escolha de ação para menu de geração de planilha
     BAIXAR_PLANILHA,     # Menu de download de planilha
 ) = map(chr, range(7, 15))
 
@@ -37,4 +37,9 @@ END = ConversationHandler.END
     CAMPO_SELECIONADO,   # Campo que está sendo editado no momento
     TEXTO,               # Texto temporário a ser exibido em telas
     GERAR,               # Gerar planilha
-) = map(chr, range(15, 24))
+    GERAR_DIA,          # Gerar dia específico
+    MENSAGENS,           # Mensagem a ser exibida
+    ENTRADA,            # Campo de entrada
+    SAIDA,              # Campo de saída
+    OBSERVACAO,         # Campo de observação
+) = map(chr, range(15, 29))

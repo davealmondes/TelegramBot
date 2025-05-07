@@ -18,36 +18,15 @@ from lembretes_handler import (
     apagar_lembrete,
     apagar_lembretes,
     campo_lembrete,
-    encerrar_edicao,
+    encerrar_edicao_lembrete,
     menu_lembrete,
     mostrar_detalhes_lembrete,
-    salvar_alteracoes,
     limpar,
     listar,
     valor_campo
 )
-from ponto_handler import baixar, gerar, gerar_planilha, menu_ponto, menu_ponto_superior
-
-def limite(admin_id: int):
-    async def handler(update, context):
-        if update.message.chat_id != admin_id:
-            await update.message.reply_text("Comando disponível apenas para administradores.")
-            return
-
-        if len(context.args) != 1:
-            await update.message.reply_text("Parâmetros inválidos. Exemplo: /limite 3")
-            return
-
-        try:
-            novo_limite = max(1, int(context.args[0]))
-            from database import Database
-            db = Database()
-            db.set_limite(novo_limite)
-            await update.message.reply_text(f"Limite ajustado para {novo_limite}.")
-        except ValueError:
-            await update.message.reply_text("O valor do limite deve ser um número inteiro.")
-
-    return handler
+from ponto_handler import baixar, campo_ponto, gerar, gerar_dia, gerar_planilha, gerar_planilha_acoes, menu_ponto, menu_ponto_superior
+from utils import limite, salvar_alteracoes
 
 def main() -> None:
     filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
@@ -67,13 +46,13 @@ def main() -> None:
 
     # Conversa de preenchimento de lembrete
     add_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(campo_lembrete, pattern=f"^{ADICIONAR_LEMBRETE}|{EDITAR_LEMBRETE}$")],
+        entry_points=[CallbackQueryHandler(campo_lembrete, pattern=f"^{ADICIONAR}|{EDITAR}$")],
         states={
             SELECIONANDO_CAMPO: [CallbackQueryHandler(valor_campo, pattern=f"^(?!{END}|{CANCELAR}).*$")],
-            DIGITANDO: [MessageHandler(filters.TEXT & ~filters.COMMAND, salvar_alteracoes)]
+            DIGITANDO: [MessageHandler(filters.TEXT & ~filters.COMMAND, salvar_alteracoes(campo_lembrete))]
         },
         fallbacks=[
-            CallbackQueryHandler(encerrar_edicao, pattern=f"^{END}|{CANCELAR}$"),
+            CallbackQueryHandler(encerrar_edicao_lembrete, pattern=f"^{END}|{CANCELAR}$"),
             CommandHandler("cancelar", encerrar)
         ],
         map_to_parent={
@@ -89,7 +68,7 @@ def main() -> None:
         CallbackQueryHandler(listar, pattern=f"^{LISTAR_LEMBRETES}$"),
         CallbackQueryHandler(mostrar_detalhes_lembrete, pattern="^info_"),
         CallbackQueryHandler(apagar_lembretes, pattern=f"^{LIMPAR_LEMBRETES}$"),
-        CallbackQueryHandler(apagar_lembrete, pattern=f"^{EXCLUIR_LEMBRETE}$"),
+        CallbackQueryHandler(apagar_lembrete, pattern=f"^{EXCLUIR}$"),
         CallbackQueryHandler(limpar, pattern="^limpar_")
     ]
 
@@ -100,11 +79,31 @@ def main() -> None:
         map_to_parent={END: SELECAO_MENU}
     )
 
+    ponto_add_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(campo_ponto, pattern=f"^{ADICIONAR}|{EDITAR}$")],
+        states={
+            SELECIONANDO_CAMPO: [CallbackQueryHandler(valor_campo, pattern=f"^(?!{END}|{CANCELAR}).*$")],
+            DIGITANDO: [MessageHandler(filters.TEXT & ~filters.COMMAND, salvar_alteracoes(campo_ponto))]
+        },
+        fallbacks=[
+
+        ],
+        map_to_parent={
+
+        }
+    )
+
     gerar_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(gerar_planilha, pattern=f"^{GERAR_PLANILHA}$")],
         states={
             ACAO_PLANILHA: [
                 CallbackQueryHandler(gerar, pattern=f"^{GERAR}$"),
+                CallbackQueryHandler(gerar_dia, pattern=f"^{GERAR_DIA}$"),
+                MessageHandler(filters.Regex("\d{2}-\d{4}"), gerar_planilha_acoes),
+                ponto_add_conv
+            ],
+            EDITANDO: [
+                CallbackQueryHandler(gerar_planilha, pattern=f"^{CANCELAR}$"),
             ]
         },
         fallbacks=[

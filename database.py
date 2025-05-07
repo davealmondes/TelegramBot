@@ -86,9 +86,9 @@ class Database:
 
     def update_lembrete(self, lembrete_id: int, novo_horario: str | None = None, nova_mensagem: str | None = None) -> None:
         if novo_horario:
-            self.cursor.execute("UPDATE lembretes SET horario = ? WHERE id = ?", (novo_horario, lembrete_id))
+            self.cursor.execute("UPDATE lembretes SET enviado_em = NULL, horario = ? WHERE id = ?", (novo_horario, lembrete_id))
         if nova_mensagem:
-            self.cursor.execute("UPDATE lembretes SET mensagem = ? WHERE id = ?", (nova_mensagem, lembrete_id))
+            self.cursor.execute("UPDATE lembretes SET enviado_em = NULL, mensagem = ? WHERE id = ?", (nova_mensagem, lembrete_id))
         self.conn.commit()
 
     def delete_lembrete_usuario(self, usuario_id: int, lembrete_id: int) -> None:

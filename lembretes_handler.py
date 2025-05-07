@@ -1,4 +1,4 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
 from telegram.ext import ContextTypes
 from constantes import *
 from database import Database
@@ -14,7 +14,7 @@ async def menu_lembrete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     buttons = [
         [
-            InlineKeyboardButton(text='Adicionar um lembrete', callback_data=str(ADICIONAR_LEMBRETE)),
+            InlineKeyboardButton(text='Adicionar um lembrete', callback_data=str(ADICIONAR)),
             InlineKeyboardButton(text='Listar Lembretes', callback_data=str(LISTAR_LEMBRETES))
         ],
         [InlineKeyboardButton(text="Apagar todos os seus lembretes", callback_data=str(LIMPAR_LEMBRETES))],
@@ -39,7 +39,7 @@ async def campo_lembrete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await menu_lembrete(update, context)
             return END
 
-        if update.callback_query.data == str(EDITAR_LEMBRETE):
+        if update.callback_query.data == str(EDITAR):
             context.user_data[CAMPOS] = {
                 HORARIO: context.user_data[EDITANDO][1],
                 MENSAGEM: context.user_data[EDITANDO][2],
@@ -69,16 +69,10 @@ async def valor_campo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     context.user_data[CAMPO_SELECIONADO] = campo
     atual = context.user_data.get(CAMPOS, {}).get(campo)
     texto = f'Digite um valor para o campo: (Valor atual: "{atual}")' if atual else "Digite um valor para o campo: "
-    await update.callback_query.edit_message_text(texto)
+    context.user_data[MENSAGENS].append(await update.callback_query.edit_message_text(texto))
     return DIGITANDO
 
-async def salvar_alteracoes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    valor = update.message.text
-    campo = context.user_data[CAMPO_SELECIONADO]
-    context.user_data[CAMPOS][campo] = valor
-    return await campo_lembrete(update, context)
-
-async def encerrar_edicao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def encerrar_edicao_lembrete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     data = update.callback_query.data
     usuario_id = update.callback_query.from_user.id
 
@@ -135,8 +129,8 @@ async def mostrar_detalhes_lembrete(update: Update, context: ContextTypes.DEFAUL
         text = f"📆 Lembrete:\nHorário: {lembrete[1]}\nMensagem: {lembrete[2]}"
 
     buttons = [
-        [InlineKeyboardButton("Editar", callback_data=str(EDITAR_LEMBRETE)),
-         InlineKeyboardButton("Excluir", callback_data=str(EXCLUIR_LEMBRETE))],
+        [InlineKeyboardButton("Editar", callback_data=str(EDITAR)),
+         InlineKeyboardButton("Excluir", callback_data=str(EXCLUIR))],
         [InlineKeyboardButton("Voltar", callback_data=str(MENU_LEMBRETES))]
     ]
     await update.callback_query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(buttons))

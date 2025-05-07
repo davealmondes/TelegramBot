@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Message, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from constantes import *
 from database import Database
@@ -25,6 +25,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     if not inicio:
         await update.message.reply_text(text="Bem-vindo!", reply_markup=keyboard)
+        if context.user_data.get(MENSAGENS):
+            context.user_data[MENSAGENS].append(update.message)
+        else:
+            context.user_data[MENSAGENS] = [update.message]
     else:
         await update.callback_query.edit_message_text("Bem-vindo!", reply_markup=keyboard)
 
@@ -37,10 +41,17 @@ async def voltar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await start(update, context)
     return END
 
-async def encerrar(update: Update, _) -> int:
+async def encerrar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Encerra a conversa."""
     if update.message:
-        await update.message.reply_text("❌ Conversa encerrada")
+        await update.message.delete()
     else:
-        await update.callback_query.edit_message_text("❌ Conversa encerrada")
+        await update.callback_query.delete_message()
+    
+    mensagens: list[Message] = context.user_data.get(MENSAGENS, [])
+    while mensagens:
+        mensagem = mensagens.pop()
+        if mensagem:
+            await mensagem.delete()
+    
     return END
