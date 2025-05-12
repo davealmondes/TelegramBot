@@ -1,4 +1,5 @@
 import os
+import locale
 import logging
 from warnings import filterwarnings
 from telegram.warnings import PTBUserWarning
@@ -28,7 +29,19 @@ from lembretes_handler import (
 from ponto_handler import baixar, campo_ponto, gerar, gerar_dia, gerar_planilha, gerar_planilha_acoes, menu_ponto, menu_ponto_superior
 from utils import limite, salvar_alteracoes
 
+def definir_locale():
+    """Define a localidade para o sistema."""
+    try:
+        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+    except locale.Error:
+        try:
+            locale.setlocale(locale.LC_ALL, 'pt_BR.utf8')
+        except locale.Error:
+            locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
+
+
 def main() -> None:
+    definir_locale()
     filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
     logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
