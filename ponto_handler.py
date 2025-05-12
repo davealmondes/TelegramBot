@@ -16,6 +16,11 @@ async def menu_ponto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handles the menu selection."""
     """Mostra o menu principal de ponto."""
     texto = context.user_data.pop(TEXTO, 'Menu de ponto...')
+    mensagens: list[Message] = context.user_data.get(MENSAGENS, [])
+    if update.message:
+        context.user_data[MES] = update.message.text
+        mensagens.append(update.message)
+
     context.user_data[EDITANDO] = None
     context.user_data[INICIO] = True
 
@@ -26,16 +31,14 @@ async def menu_ponto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         ],
         [InlineKeyboardButton(text='Voltar', callback_data=str(END))]
     ]
-
-    await update.callback_query.edit_message_text(texto, reply_markup=InlineKeyboardMarkup(buttons))
+    if update.message:
+        mensagens.append(await update.message.reply_text(texto, reply_markup=InlineKeyboardMarkup(buttons)))
+    else:
+        mensagens.append(await update.callback_query.edit_message_text(texto, reply_markup=InlineKeyboardMarkup(buttons)))
     return SELECAO_MENU_PONTO
 
-async def gerar_planilha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    if update.callback_query.data == str(CANCELAR):
-        mensagem: Message = context.user_data[MENSAGENS].pop()
-        if mensagem:
-            await mensagem.delete()
-            
+async def escolher_mes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+                
     mes = datetime.now().month
     ano = datetime.now().year
     meses = [f"{ mes - (-(12 - i) if mes -i <= 0 else i):02}-{ano - (1 if mes - i <= 0 else 0)}" for i in range(12)]
@@ -48,7 +51,8 @@ async def gerar_planilha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "Selecione o mês para gerar a planilha.",
         reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
     ))
-    return ACAO_PLANILHA
+    context.user_data[INICIO] = True
+    return SELECAO_MENU
 
 async def gerar_planilha_acoes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     texto = context.user_data.pop(TEXTO, 'Gerando planilha...')
@@ -59,8 +63,8 @@ async def gerar_planilha_acoes(update: Update, context: ContextTypes.DEFAULT_TYP
         ],
         [InlineKeyboardButton(text='Voltar', callback_data=str(END))]
     ]
-    await update.message.reply_text(texto, reply_markup=InlineKeyboardMarkup(buttons)) #callback_query.edit_message_text(texto, reply_markup=InlineKeyboardMarkup(buttons))
-    return ACAO_PLANILHA
+    await update.callback_query.edit_message_text(texto, reply_markup=InlineKeyboardMarkup(buttons)) #callback_query.edit_message_text(texto, reply_markup=InlineKeyboardMarkup(buttons))
+    return SELECAO_MENU_PONTO
 
 async def menu_ponto_superior(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await menu_ponto(update, context)
@@ -138,21 +142,18 @@ async def encerrar_edicao_ponto(update: Update, context: ContextTypes.DEFAULT_TY
         return END
 
 async def gerar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    pontos_existentes: list[Any] = db.get_data_pontos()
-    ano: int = datetime.now().year
-    mes: int = datetime.now().month
+    (mes, ano) = map(int, context.user_data.get(MES, "").split('-'))
+    pontos_existentes: list[Any] = db.get_data_pontos(ano, mes)
+    mes_atual: int = datetime.now().month
     hoje: int = datetime.now().day
     feriados = holidays.BR(years=ano, state='SP', language='pt_BR')
     for dia in range(1, calendar.monthrange(ano, mes)[1] + 1):
-        if dia > hoje:
+        if dia > hoje and mes_atual == mes:
             break
         data: datetime = datetime(ano, mes, dia)
         data_str: str = data.strftime("%Y-%m-%d")
         if (data_str,) in pontos_existentes:
             continue
-        if data.weekday() == 1: # Terça-feira
-            entrada = saida = None
-            feriado_nome = 'Presencial'
         elif data.weekday() >= 5:
             entrada = saida = feriado_nome = None
         elif data in feriados:
@@ -165,26 +166,25 @@ async def gerar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             saida = saida_dt.strftime("%H:%M")
             feriado_nome = None
         db.insert_ponto(data_str, dia, entrada, saida, feriado_nome)
-    context.user_data[TEXTO] = f"Planilha gerada com sucesso para."
-    await menu_ponto(update, context)
-    return END
+    context.user_data[TEXTO] = f"Planilha gerada com sucesso para {calendar.month_name[mes]} de {ano}."
+    return await menu_ponto(update, context)
 
 async def baixar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    pontos: pd.DataFrame = db.get_pontos()
+    data = context.user_data.get(MES)
+    pontos: pd.DataFrame = db.get_pontos(data)
     if pontos.empty:
         context.user_data[TEXTO] = f"Não há pontos registrados."
         return await menu_ponto(update, context)
 
     # Corrigir coluna para exportação
-    pontos["entrada"] = pontos.apply(lambda row: "PRESENCIAL" if row['feriado'] == 'Presencial' else ("FERIADO" if row['feriado'] else row['entrada']), axis=1)
-    pontos["feriado"] = pontos.apply(lambda row: "" if row['feriado'] == 'Presencial' else row['feriado'], axis=1)
+    pontos["entrada"] = pontos.apply(lambda row: "FERIADO" if row['feriado'] else row['entrada'], axis=1)
     pontos = pontos[["dia", "entrada", "saida", "feriado"]]
     pontos.columns = ["Dia", "Entrada", "Saída", "Observação"]
 
     # Exportar com mesclagem dos feriados
     pasta: str = f"uploads/{update.callback_query.from_user.id}"
     os.makedirs(pasta, exist_ok=True)
-    nome_arquivo: str = f"{pasta}/ponto.xlsx"
+    nome_arquivo: str = f"{pasta}/{data}.xlsx"
     with pd.ExcelWriter(nome_arquivo, engine='xlsxwriter') as writer:
         pontos.to_excel(writer, sheet_name='Ponto', index=False)
         workbook = writer.book
@@ -196,7 +196,7 @@ async def baixar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             if pd.isna(row['Saída']) and not pd.isna(row['Entrada']):
                 if "FERIADO" in row['Entrada'] or "PRESENCIAL" in row['Entrada']:
                     worksheet.merge_range(i + 1, 1, i + 1, 2, row['Entrada'], center_format)
-
-    await context.bot.send_document(update.callback_query.from_user.id, open(nome_arquivo, "rb"))
+    mensagens: list[Message] = context.user_data.get(MENSAGENS, [])
+    mensagens.append(await context.bot.send_document(update.callback_query.from_user.id, open(nome_arquivo, "rb")))
     context.user_data[TEXTO] = "Planilha resgatada..."
     return SELECAO_MENU_PONTO

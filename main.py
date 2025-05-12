@@ -26,7 +26,7 @@ from lembretes_handler import (
     listar,
     valor_campo
 )
-from ponto_handler import baixar, campo_ponto, gerar, gerar_dia, gerar_planilha, gerar_planilha_acoes, menu_ponto, menu_ponto_superior
+from ponto_handler import baixar, campo_ponto, gerar, gerar_dia, escolher_mes, gerar_planilha_acoes, menu_ponto, menu_ponto_superior
 from utils import limite, salvar_alteracoes
 
 def definir_locale():
@@ -106,44 +106,30 @@ def main() -> None:
         }
     )
 
-    gerar_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(gerar_planilha, pattern=f"^{GERAR_PLANILHA}$")],
-        states={
-            ACAO_PLANILHA: [
-                CallbackQueryHandler(gerar, pattern=f"^{GERAR}$"),
-                CallbackQueryHandler(gerar_dia, pattern=f"^{GERAR_DIA}$"),
-                MessageHandler(filters.Regex("\d{2}-\d{4}"), gerar_planilha_acoes),
-                ponto_add_conv
-            ],
-            EDITANDO: [
-                CallbackQueryHandler(gerar_planilha, pattern=f"^{CANCELAR}$"),
-            ]
-        },
-        fallbacks=[
-            CommandHandler("cancelar", encerrar),
-            CallbackQueryHandler(menu_ponto_superior, pattern=f"^{END}$")
-        ],
-        map_to_parent={
-            END: SELECAO_MENU_PONTO,
-        }
-    )
-
-    ponto_selecoes = [
-        gerar_conv,
+    ponto_menu = [
+        CallbackQueryHandler(gerar, pattern=f"^{GERAR}$"),
+        CallbackQueryHandler(gerar_planilha_acoes, pattern=f"^{GERAR_PLANILHA}$"),
         CallbackQueryHandler(baixar, pattern=f"^{BAIXAR_PLANILHA}$"),
-
+        CallbackQueryHandler(gerar_dia, pattern=f"^{GERAR_DIA}$"),
+        ponto_add_conv
     ]
 
     ponto_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(menu_ponto, pattern=f"^{MENU_PONTO}$")],
-        states={SELECAO_MENU_PONTO: ponto_selecoes},
+        entry_points=[MessageHandler(filters.Regex("\d{2}-\d{4}"), menu_ponto)],
+        states={SELECAO_MENU_PONTO: ponto_menu},
         fallbacks=[CallbackQueryHandler(voltar, pattern=f"^{END}$")],
         map_to_parent={END: SELECAO_MENU}
     )
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
-        states={SELECAO_MENU: [lembretes_conv, ponto_conv, add_conv, CallbackQueryHandler(encerrar, pattern=f"^{END}$")]},
+        states={SELECAO_MENU: [
+            lembretes_conv, 
+            ponto_conv, 
+            add_conv, 
+            CallbackQueryHandler(start, pattern=f"^{CANCELAR}$"),
+            CallbackQueryHandler(escolher_mes, pattern=f"^{MENU_PONTO}"),
+            CallbackQueryHandler(encerrar, pattern=f"^{END}$")]},
         fallbacks=[CommandHandler("cancelar", encerrar)]
     )
 

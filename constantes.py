@@ -42,4 +42,5 @@ END = ConversationHandler.END
     ENTRADA,            # Campo de entrada
     SAIDA,              # Campo de saída
     OBSERVACAO,         # Campo de observação
-) = map(chr, range(15, 29))
+    MES,                # Mês selecionado
+) = map(chr, range(15, 30))

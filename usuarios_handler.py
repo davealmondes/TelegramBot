@@ -9,7 +9,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Inicia a conversa e registra o usuário se necessário."""
     inicio = context.user_data.get(INICIO)
     usuario_id = update.message.chat_id if update.message else update.callback_query.from_user.id
-
     if inicio is None:
         user = update.message.from_user if update.message else update.callback_query.from_user
         usuario = db.get_usuario(usuario_id)
@@ -23,14 +22,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     ]
     keyboard = InlineKeyboardMarkup(buttons)
 
+    if not context.user_data.get(MENSAGENS):
+        context.user_data[MENSAGENS] = []
+    mensagens: list[Message] = context.user_data.get(MENSAGENS, [])
     if not inicio:
-        await update.message.reply_text(text="Bem-vindo!", reply_markup=keyboard)
-        if context.user_data.get(MENSAGENS):
-            context.user_data[MENSAGENS].append(update.message)
-        else:
-            context.user_data[MENSAGENS] = [update.message]
+        mensagens.append(update.message)
+        mensagens.append(await update.message.reply_text(text="Bem-vindo!", reply_markup=keyboard))
     else:
-        await update.callback_query.edit_message_text("Bem-vindo!", reply_markup=keyboard)
+        mensagens.append(await update.callback_query.edit_message_text("Bem-vindo!", reply_markup=keyboard))
 
     context.user_data[INICIO] = False
     return SELECAO_MENU
@@ -43,15 +42,19 @@ async def voltar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def encerrar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Encerra a conversa."""
-    if update.message:
+    mensagens: list[Message] = context.user_data.get(MENSAGENS, [])
+
+    if update.message and update.message not in mensagens:
         await update.message.delete()
-    else:
+    elif update.callback_query.message not in mensagens:
         await update.callback_query.delete_message()
     
-    mensagens: list[Message] = context.user_data.get(MENSAGENS, [])
     while mensagens:
         mensagem = mensagens.pop()
         if mensagem:
-            await mensagem.delete()
+            try:
+                await mensagem.delete()
+            except Exception as e:
+                print(f"Erro ao deletar mensagem. Mensagem provavelmente já foi deletada. Erro")
     
     return END

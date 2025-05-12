@@ -130,11 +130,11 @@ class Database:
         self.cursor.execute("SELECT data FROM ponto WHERE strftime('%Y-%m', data) = ?", (f"{ano}-{mes:02}",))
         return self.cursor.fetchall()
     
-    def get_pontos(self) -> pd.DataFrame:
+    def get_pontos(self, data) -> pd.DataFrame:
         return pd.read_sql_query("""
         SELECT * FROM ponto 
-        WHERE strftime('%Y-%m', data) = ? 
-        order by dia""", self.conn, params=(f"{datetime.today().year}-{datetime.today().month:02}",))
+        WHERE strftime('%m-%Y', data) = ? 
+        order by dia""", self.conn, params=(data,))
     
     def insert_ponto(self, data: str, dia: int, entrada: str, saida: str, feriado: str) -> None:
         self.cursor.execute("""
