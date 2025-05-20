@@ -21,7 +21,8 @@ from telegram.ext import ConversationHandler
     GERAR_PLANILHA,      # Menu de geração de planilha
     ACAO_PLANILHA,       # Escolha de ação para menu de geração de planilha
     BAIXAR_PLANILHA,     # Menu de download de planilha
-) = map(chr, range(7, 15))
+    INFO_PLANILHA,       # Informações sobre a planilha
+) = map(chr, range(7, 16))
 
 # Marcador de fim de conversa
 END = ConversationHandler.END
@@ -43,4 +44,5 @@ END = ConversationHandler.END
     SAIDA,              # Campo de saída
     OBSERVACAO,         # Campo de observação
     MES,                # Mês selecionado
-) = map(chr, range(15, 30))
+    DIA,                # Dia selecionado
+) = map(chr, range(16, 32))

@@ -1,7 +1,7 @@
 import calendar
-from datetime import datetime
+from datetime import date, datetime
+import math
 import os
-from typing import Any
 import holidays
 import pandas as pd
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
@@ -27,7 +27,8 @@ async def menu_ponto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     buttons = [
         [
             InlineKeyboardButton(text='Gerar Planilha', callback_data=str(GERAR_PLANILHA)),
-            InlineKeyboardButton(text='Baixar Planilha', callback_data=str(BAIXAR_PLANILHA))
+            InlineKeyboardButton(text='Baixar Planilha', callback_data=str(BAIXAR_PLANILHA)),
+            InlineKeyboardButton(text='Info Planilha', callback_data=str(INFO_PLANILHA))
         ],
         [InlineKeyboardButton(text='Voltar', callback_data=str(END))]
     ]
@@ -54,6 +55,70 @@ async def escolher_mes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     context.user_data[INICIO] = True
     return SELECAO_MENU
 
+async def info_planilha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Exibe informações sobre a planilha."""
+    data = context.user_data.get(MES)
+    (mes, ano) = map(int, data.split('-'))
+    pontos_existentes: pd.DataFrame= db.get_pontos(data)
+    feriados = holidays.BR(years=ano, state='SP', language='pt_BR')
+    dias_do_mes = [
+        date(ano, mes, dia)
+        for dia in range(1, calendar.monthrange(ano, mes)[1] + 1)
+    ]
+    dias_uteis = [
+        d for d in dias_do_mes if d.weekday() < 5 and d not in feriados
+    ]
+    dias_com_ponto = [
+        d for d in dias_uteis if d.strftime("%Y-%m-%d") in pontos_existentes["data"].values
+    ]
+
+    dias_faltando = [
+        d for d in dias_uteis if d.strftime("%Y-%m-%d") not in pontos_existentes["data"].values
+    ]
+
+    horas_trabalhadas = 0.0
+    horas_esperadas = len(dias_com_ponto) * 9
+    horas_devidas = 0.0
+    horas_extras = 0.0
+
+    for d in dias_com_ponto:
+        ponto =  pontos_existentes.query(f"data == '{d.strftime('%Y-%m-%d')}'")
+        if not ponto.empty:
+            entrada = ponto["entrada"].values[0]
+            saida = ponto["saida"].values[0]
+            if entrada and saida:
+                entrada_dt = datetime.strptime(entrada, "%H:%M")
+                saida_dt = datetime.strptime(saida, "%H:%M")
+                horas = (saida_dt - entrada_dt).seconds / 3600
+                horas_trabalhadas += horas
+                saldo = 9 - horas
+                if saldo > 0:
+                    horas_devidas += saldo
+                else:
+                    horas_extras += abs(saldo)
+    
+    horas_trabalhadas_horas = math.floor(horas_trabalhadas)
+    horas_trabalhadas_minutos = math.floor((horas_trabalhadas - horas_trabalhadas_horas) * 60)
+    horas_devidas_horas = math.floor(horas_devidas)
+    horas_devidas_minutos = math.floor((horas_devidas - horas_devidas_horas) * 60)
+    horas_extras_horas = math.floor(horas_extras)
+    horas_extras_minutos = math.floor((horas_extras - horas_extras_horas) * 60)
+
+    texto = f"Planilha de {calendar.month_name[mes]} de {ano}:\n"
+    texto += f"Total de dias úteis: {len(dias_uteis)}\n"
+    texto += f"Total de dias trabalhados registrados: {len(dias_com_ponto)}\n"
+    texto += f"Total de dias a trabalhar / registrar: {len(dias_faltando)}\n"
+    texto += f"Total de horas trabalhadas registradas: {horas_trabalhadas_horas} horas e {horas_trabalhadas_minutos} minutos\n"
+    texto += f"Total de horas trabalhadas esperadas: {horas_esperadas:.2f} horas\n"
+    texto += f"Total de horas devidas registradas: {horas_devidas_horas} horas e {horas_devidas_minutos} minutos\n"
+    texto += f"Total de horas extras registradas: {horas_extras_horas} horas e {horas_extras_minutos} minutos\n"
+
+    mensagens = context.user_data.get(MENSAGENS, [])
+    mensagens.append(await update.callback_query.edit_message_text(texto, reply_markup=update.callback_query.message.reply_markup))
+    return SELECAO_MENU_PONTO
+
+
+
 async def gerar_planilha_acoes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     texto = context.user_data.pop(TEXTO, 'Gerando planilha...')
     buttons = [
@@ -71,8 +136,7 @@ async def menu_ponto_superior(update: Update, context: ContextTypes.DEFAULT_TYPE
     return END
 
 async def gerar_dia(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    ano = datetime.now().year
-    mes = datetime.now().month
+    (mes, ano) = map(int, context.user_data.get(MES, "").split('-'))
     dias = calendar.monthrange(ano, mes)[1]
     keyboard = [
          [f"{dia:02}", f"{dia +1:02}"] if dia + 1 <= dias else [f"{dia:02}"] for dia in range(1, dias + 1, 2)
@@ -83,27 +147,31 @@ async def gerar_dia(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "Selecione o dia para gerar a planilha.",
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
     ))
-    return EDITANDO
+    return SELECAO_MENU_PONTO
 
 async def campo_ponto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Exibe campos a preencher/editáveis do ponto."""
-    
+    mensagens: list[Message] = context.user_data.get(MENSAGENS, [])
     if update.message:
-        texto = "Campo atualizado..."
-    else:
+        mensagens.append(update.message)
+        if context.user_data.get(INICIO):
+            context.user_data[DIA] = update.message.text
+            context.user_data[INICIO] = False
 
-        if update.callback_query.data == str(EDITAR):
-            context.user_data[CAMPOS] = {
-                ENTRADA: context.user_data[EDITANDO][1],
-                SAIDA: context.user_data[EDITANDO][2],
-                OBSERVACAO: context.user_data[EDITANDO][3]
-            }
-            texto = "Editando lembrete..."
-        else:
-            if context.user_data.get(INICIO):
-                context.user_data[CAMPOS] = {}
-                context.user_data[INICIO] = False
-            texto = context.user_data.pop(TEXTO, "Adicionando lembrete...")
+
+    (mes, ano) = map(int, context.user_data.get(MES, "").split('-'))
+    ponto = db.get_ponto(date(ano, mes, int(update.message.text)))
+    if ponto:
+        context.user_data[CAMPOS] = {
+            ENTRADA: ponto[0],
+            SAIDA: ponto[1],
+            OBSERVACAO: ponto[2]
+        }
+        texto = f"Editando ponto..."
+    else:
+        if context.user_data.get(INICIO):
+            context.user_data[CAMPOS] = {}
+        texto = f"Adicionando ponto..."        
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Entrada", callback_data=str(ENTRADA)),
@@ -130,20 +198,24 @@ async def encerrar_edicao_ponto(update: Update, context: ContextTypes.DEFAULT_TY
         return END
 
     if data == str(END):
-        dia = int(update.message.text) if update.message else int(update.callback_query.data)
-        data_str: str = datetime.now().strftime(f"%Y-{datetime.now().month:02}-{dia:02}")
-        entrada = context.user_data[CAMPOS].get(ENTRADA)
-        saida = context.user_data[CAMPOS].get(SAIDA)
-        observacao = context.user_data[CAMPOS].get(OBSERVACAO)
+        (mes, ano) = map(int, context.user_data.get(MES, "").split('-'))
+        dia = int(context.user_data.get(DIA))
+        data_dt = date(ano, mes, dia)
+        campos = context.user_data.get(CAMPOS, {})
+        entrada = campos.get(ENTRADA)
+        saida = campos.get(SAIDA)
+        observacao = campos.get(OBSERVACAO)
 
-        db.insert_ponto(data_str, dia, entrada, saida, observacao)
+        db.insert_ponto(data_dt, entrada, saida, observacao)
         context.user_data[TEXTO] = "Ponto registrado com sucesso."
         await menu_ponto(update, context)
         return END
 
 async def gerar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     (mes, ano) = map(int, context.user_data.get(MES, "").split('-'))
-    pontos_existentes: list[Any] = db.get_data_pontos(ano, mes)
+    data = context.user_data.get(MES)
+    (mes, ano) = map(int, data.split('-'))
+    pontos_existentes: pd.DataFrame = db.get_pontos(data)
     mes_atual: int = datetime.now().month
     hoje: int = datetime.now().day
     feriados = holidays.BR(years=ano, state='SP', language='pt_BR')
@@ -152,7 +224,7 @@ async def gerar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             break
         data: datetime = datetime(ano, mes, dia)
         data_str: str = data.strftime("%Y-%m-%d")
-        if (data_str,) in pontos_existentes:
+        if (data_str,) in pontos_existentes["data"].values:
             continue
         elif data.weekday() >= 5:
             entrada = saida = feriado_nome = None
@@ -165,7 +237,7 @@ async def gerar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             entrada = entrada_dt.strftime("%H:%M")
             saida = saida_dt.strftime("%H:%M")
             feriado_nome = None
-        db.insert_ponto(data_str, dia, entrada, saida, feriado_nome)
+        db.insert_ponto(data_str, entrada, saida, feriado_nome)
     context.user_data[TEXTO] = f"Planilha gerada com sucesso para {calendar.month_name[mes]} de {ano}."
     return await menu_ponto(update, context)
 

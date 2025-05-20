@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Any
 from database import Database
 from telegram.ext import ContextTypes
 

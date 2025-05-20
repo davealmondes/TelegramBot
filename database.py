@@ -43,7 +43,6 @@ class Database:
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS ponto(
                 data TEXT PRIMARY KEY,
-                dia INTEGER,
                 entrada TEXT,
                 saida TEXT,
                 feriado TEXT
@@ -123,23 +122,21 @@ class Database:
     def set_limite(self, limite: int) -> None:
         self.cursor.execute("INSERT OR REPLACE INTO config VALUES (?, ?)", ("limite", str(limite)))
         self.conn.commit()
-
-    def get_data_pontos(self, year: int|None = None, month: int|None = None) -> list[Any]:
-        ano = year if year else datetime.today().year
-        mes = month if month else datetime.today().month
-        self.cursor.execute("SELECT data FROM ponto WHERE strftime('%Y-%m', data) = ?", (f"{ano}-{mes:02}",))
-        return self.cursor.fetchall()
     
+    def get_ponto(self, data: str) -> Any:
+        self.cursor.execute("SELECT entrada, saida, feriado FROM ponto WHERE strftime('') = ?", (data,))
+        return self.cursor.fetchone()
+
     def get_pontos(self, data) -> pd.DataFrame:
         return pd.read_sql_query("""
-        SELECT * FROM ponto 
+        SELECT data, entrada, saida, feriado FROM ponto 
         WHERE strftime('%m-%Y', data) = ? 
-        order by dia""", self.conn, params=(data,))
+        order by data""", self.conn, params=(data,))
     
-    def insert_ponto(self, data: str, dia: int, entrada: str, saida: str, feriado: str) -> None:
+    def insert_ponto(self, data: str, entrada: str, saida: str, feriado: str) -> None:
         self.cursor.execute("""
-            INSERT INTO ponto (data, dia, entrada, saida, feriado) VALUES (?, ?, ?, ?, ?)
-        """, (data, dia, entrada, saida, feriado))
+            INSERT INTO ponto (data, entrada, saida, feriado) VALUES (?, ?, ?, ?)
+        """, (data, entrada, saida, feriado))
         self.conn.commit()
 
     def close(self):

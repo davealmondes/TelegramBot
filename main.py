@@ -26,7 +26,7 @@ from lembretes_handler import (
     listar,
     valor_campo
 )
-from ponto_handler import baixar, campo_ponto, gerar, gerar_dia, escolher_mes, gerar_planilha_acoes, menu_ponto, menu_ponto_superior
+from ponto_handler import baixar, campo_ponto, encerrar_edicao_ponto, gerar, gerar_dia, escolher_mes, gerar_planilha_acoes, info_planilha, menu_ponto
 from utils import limite, salvar_alteracoes
 
 def definir_locale():
@@ -93,16 +93,17 @@ def main() -> None:
     )
 
     ponto_add_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(campo_ponto, pattern=f"^{ADICIONAR}|{EDITAR}$")],
+        entry_points=[MessageHandler(filters.TEXT & ~ filters.COMMAND & filters.Regex("^\\d{2}$"), campo_ponto)],
         states={
             SELECIONANDO_CAMPO: [CallbackQueryHandler(valor_campo, pattern=f"^(?!{END}|{CANCELAR}).*$")],
             DIGITANDO: [MessageHandler(filters.TEXT & ~filters.COMMAND, salvar_alteracoes(campo_ponto))]
         },
         fallbacks=[
-
+            CallbackQueryHandler(encerrar_edicao_ponto, pattern=f"^{END}|{CANCELAR}$"),
+            CommandHandler("cancelar", encerrar),
         ],
         map_to_parent={
-
+            END: SELECAO_MENU_PONTO
         }
     )
 
@@ -111,13 +112,14 @@ def main() -> None:
         CallbackQueryHandler(gerar_planilha_acoes, pattern=f"^{GERAR_PLANILHA}$"),
         CallbackQueryHandler(baixar, pattern=f"^{BAIXAR_PLANILHA}$"),
         CallbackQueryHandler(gerar_dia, pattern=f"^{GERAR_DIA}$"),
+        CallbackQueryHandler(info_planilha, pattern=f"^{INFO_PLANILHA}$"),
         ponto_add_conv
     ]
 
     ponto_conv = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("\d{2}-\d{4}"), menu_ponto)],
+        entry_points=[MessageHandler(filters.TEXT & ~ filters.COMMAND & filters.Regex("^\\d{2}-\\d{4}$"), menu_ponto)],
         states={SELECAO_MENU_PONTO: ponto_menu},
-        fallbacks=[CallbackQueryHandler(voltar, pattern=f"^{END}$")],
+        fallbacks=[CallbackQueryHandler(voltar, pattern=f"^{END}|{CANCELAR}$")],
         map_to_parent={END: SELECAO_MENU}
     )
 
@@ -130,7 +132,7 @@ def main() -> None:
             CallbackQueryHandler(start, pattern=f"^{CANCELAR}$"),
             CallbackQueryHandler(escolher_mes, pattern=f"^{MENU_PONTO}"),
             CallbackQueryHandler(encerrar, pattern=f"^{END}$")]},
-        fallbacks=[CommandHandler("cancelar", encerrar)]
+        fallbacks=[CommandHandler("cancelar", encerrar)],
     )
 
     application.add_handler(CommandHandler("limite", limite(admin_id)))
