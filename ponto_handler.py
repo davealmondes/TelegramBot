@@ -60,6 +60,7 @@ async def info_planilha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     data = context.user_data.get(MES)
     (mes, ano) = map(int, data.split('-'))
     pontos_existentes: pd.DataFrame= db.get_pontos(data)
+    qtd: int = len(pontos_existentes)
     feriados = holidays.BR(years=ano, state='SP', language='pt_BR')
     dias_do_mes = [
         date(ano, mes, dia)
@@ -156,22 +157,10 @@ async def campo_ponto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         mensagens.append(update.message)
         if context.user_data.get(INICIO):
             context.user_data[DIA] = update.message.text
-            context.user_data[INICIO] = False
-
-
-    (mes, ano) = map(int, context.user_data.get(MES, "").split('-'))
-    ponto = db.get_ponto(date(ano, mes, int(update.message.text)))
-    if ponto:
-        context.user_data[CAMPOS] = {
-            ENTRADA: ponto[0],
-            SAIDA: ponto[1],
-            OBSERVACAO: ponto[2]
-        }
-        texto = f"Editando ponto..."
-    else:
-        if context.user_data.get(INICIO):
             context.user_data[CAMPOS] = {}
-        texto = f"Adicionando ponto..."        
+            context.user_data[INICIO] = False
+    
+    texto = f"Adicionando ponto..."        
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Entrada", callback_data=str(ENTRADA)),
@@ -249,8 +238,9 @@ async def baixar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return await menu_ponto(update, context)
 
     # Corrigir coluna para exportação
+    pontos["data"] = pontos.apply(lambda row: row['data'].split("-")[2], axis=1)
     pontos["entrada"] = pontos.apply(lambda row: "FERIADO" if row['feriado'] else row['entrada'], axis=1)
-    pontos = pontos[["dia", "entrada", "saida", "feriado"]]
+    pontos = pontos[["data", "entrada", "saida", "feriado"]]
     pontos.columns = ["Dia", "Entrada", "Saída", "Observação"]
 
     # Exportar com mesclagem dos feriados

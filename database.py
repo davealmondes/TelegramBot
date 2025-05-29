@@ -135,7 +135,7 @@ class Database:
     
     def insert_ponto(self, data: str, entrada: str, saida: str, feriado: str) -> None:
         self.cursor.execute("""
-            INSERT INTO ponto (data, entrada, saida, feriado) VALUES (?, ?, ?, ?)
+            INSERT OR REPLACE INTO ponto (data, entrada, saida, feriado) VALUES (?, ?, ?, ?)
         """, (data, entrada, saida, feriado))
         self.conn.commit()
 
