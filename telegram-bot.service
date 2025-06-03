@@ -3,14 +3,14 @@ Description=Telegram Bot
 After=network.target
 
 [Service]
-User=ubuntu
-WorkingDirectory=/home/ubuntu/telegram-bot
-ExecStart=/home/ubuntu/telegram-bot/venv/bin/python3 /home/ubuntu/telegram-bot/main.py
+User=david_almondes
+WorkingDirectory=/home/david_almondes/telegram-bot
+ExecStart=/home/david_almondes/telegram-bot/venv/bin/python3 /home/david_almondes/telegram-bot/main.py
 ExecStop=/bin/kill -s SIGTERM $MAINPID
 KillMode=process
 TimeoutStopSec=10
 Restart=always
-EnvironmentFile=/home/ubuntu/telegram-bot/.env
+EnvironmentFile=/home/david_almondes/telegram-bot/.env
 
 StandardOutput=append:/var/log/telegram-bot.log
 StandardError=append:/var/log/telegram-bot_error.log
