@@ -1,5 +1,5 @@
 import calendar
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import math
 import os
 import holidays
@@ -104,6 +104,8 @@ async def info_planilha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     horas_devidas_minutos = math.floor((horas_devidas - horas_devidas_horas) * 60)
     horas_extras_horas = math.floor(horas_extras)
     horas_extras_minutos = math.floor((horas_extras - horas_extras_horas) * 60)
+    context.user_data[HORAS_DEVIDAS] = horas_devidas
+    context.user_data[DIAS_FALTANDO] = len(dias_faltando)
 
     texto = f"Planilha de {calendar.month_name[mes]} de {ano}:\n"
     texto += f"Total de dias úteis: {len(dias_uteis)}\n"
@@ -208,6 +210,8 @@ async def gerar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     mes_atual: int = datetime.now().month
     hoje: int = datetime.now().day
     feriados = holidays.BR(years=ano, state='SP', language='pt_BR')
+    horas_devidas: float = context.user_data.get(HORAS_DEVIDAS, 0.0)
+    dias_faltando: int = context.user_data.get(DIAS_FALTANDO, 1)
     for dia in range(1, calendar.monthrange(ano, mes)[1] + 1):
         if dia > hoje and mes_atual == mes:
             break
@@ -224,7 +228,7 @@ async def gerar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             entrada_dt = random_entrada(data)
             saida_dt = random_saida(entrada_dt)
             entrada = entrada_dt.strftime("%H:%M")
-            saida = saida_dt.strftime("%H:%M")
+            saida = (saida_dt + timedelta(hours=horas_devidas / dias_faltando)).strftime("%H:%M")
             feriado_nome = None
         db.insert_ponto(data_str, entrada, saida, feriado_nome)
     context.user_data[TEXTO] = f"Planilha gerada com sucesso para {calendar.month_name[mes]} de {ano}."
