@@ -45,6 +45,5 @@ END = ConversationHandler.END
     OBSERVACAO,         # Campo de observação
     MES,                # Mês selecionado
     DIA,                # Dia selecionado
-    HORAS_DEVIDAS,      # Horas devidas
     DIAS_FALTANDO,      # Dias faltando
-) = map(chr, range(16, 34))
+) = map(chr, range(16, 33))

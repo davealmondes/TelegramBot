@@ -18,7 +18,8 @@ class Database:
                 nomeusuario TEXT,
                 nome TEXT,
                 idioma TEXT,
-                criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+                criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+                horas_devidas NUMERIC DEFAULT 0            
             )
         """)
 
@@ -45,7 +46,8 @@ class Database:
                 data TEXT PRIMARY KEY,
                 entrada TEXT,
                 saida TEXT,
-                feriado TEXT
+                feriado TEXT,
+                contabilizado INTEGER DEFAULT 0
             )
         """)
 
@@ -64,9 +66,39 @@ class Database:
         )
         self.conn.commit()
 
+    def update_contabilizado(self, ponto_data: str, usuario_id: int, horas: float) -> None:
+        """Atualiza o campo contabilizado para 1 para o ponto do usuário."""
+        self.cursor.execute(
+            "UPDATE ponto SET contabilizado = 1 WHERE data = ?",
+            (ponto_data,)
+        )
+        self.cursor.execute(
+            "SELECT horas_devidas FROM usuarios WHERE id = ?",
+            (usuario_id,)
+        )
+        horas_devidas = self.cursor.fetchone()
+        self.cursor.execute(
+            "UPDATE usuarios SET horas_devidas = ? WHERE id = ?",
+            (horas_devidas[0] + horas, usuario_id)
+        )
+        self.conn.commit()
+
     def get_usuario(self, usuario_id: int) -> Any:
         self.cursor.execute("SELECT id FROM usuarios WHERE id = ?", (usuario_id,))
         return self.cursor.fetchone()
+    
+    def get_horas_devidas(self, usuario_id: int) -> float:
+        self.cursor.execute("SELECT horas_devidas FROM usuarios WHERE id = ?", (usuario_id,))
+        result = self.cursor.fetchone()
+        return float(result[0]) if result else 0.0
+    
+    def update_horas_devidas(self, usuario_id: int, horas: float) -> None:
+        """Atualiza as horas devidas do usuário."""
+        self.cursor.execute(
+            "UPDATE usuarios SET horas_devidas = horas_devidas + ? WHERE id = ?",
+            (horas, usuario_id)
+        )
+        self.conn.commit()
 
     def add_lembrete(self, usuario_id: int, horario: str, mensagem: str) -> None:
         self.cursor.execute(
@@ -129,7 +161,7 @@ class Database:
 
     def get_pontos(self, data) -> pd.DataFrame:
         return pd.read_sql_query("""
-        SELECT data, entrada, saida, feriado FROM ponto 
+        SELECT data, entrada, saida, feriado, contabilizado FROM ponto 
         WHERE strftime('%m-%Y', data) = ? 
         order by data""", self.conn, params=(data,))
     
