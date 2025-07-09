@@ -208,6 +208,7 @@ async def gerar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             break
         data: datetime = datetime(ano, mes, dia)
         data_str: str = data.strftime("%Y-%m-%d")
+        debito: float = 0.0
         if (data_str,) in pontos_existentes["data"].values:
             continue
         elif data.weekday() >= 5:
@@ -220,7 +221,7 @@ async def gerar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             saida_dt = random_saida(entrada_dt)
             entrada = entrada_dt.strftime("%H:%M")
             horas_devidas: float = db.get_horas_devidas(update.callback_query.from_user.id)
-            debito: float = horas_devidas / dias_faltando
+            debito = horas_devidas / dias_faltando
             saida = (saida_dt + timedelta(hours=debito) ).strftime("%H:%M")
             feriado_nome = None
         db.insert_ponto(data_str, entrada, saida, feriado_nome)

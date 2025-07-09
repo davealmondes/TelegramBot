@@ -93,6 +93,8 @@ class Database:
         return float(result[0]) if result else 0.0
     
     def update_horas_devidas(self, usuario_id: int, horas: float) -> None:
+        if horas == 0.0:
+            return
         """Atualiza as horas devidas do usuário."""
         self.cursor.execute(
             "UPDATE usuarios SET horas_devidas = horas_devidas + ? WHERE id = ?",
