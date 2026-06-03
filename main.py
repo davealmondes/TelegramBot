@@ -134,15 +134,15 @@ def main() -> None:
     application.add_handler(CommandHandler("limite", limite(admin_id)))
     application.add_handler(conv_handler)
 
-    # application.run_webhook(
-    #     listen="0.0.0.0",
-    #     port=8000,
-    #     url_path="webhook",
-    #     secret_token=os.getenv("WEBHOOK_SECRET_TOKEN"),
-    #     webhook_url=os.getenv("WEBHOOK_URL"),
-    # )
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=8000,
+        url_path="webhook",
+        secret_token=os.getenv("WEBHOOK_SECRET_TOKEN"),
+        webhook_url=os.getenv("WEBHOOK_URL"),
+    )
 
-    application.run_polling()
+    #application.run_polling() --- Para desenvolvimento local, sem necessidade de webhook
 
 
 if __name__ == "__main__":
