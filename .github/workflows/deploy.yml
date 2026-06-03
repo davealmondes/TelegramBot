@@ -31,10 +31,10 @@ jobs:
               cd "$CAMINHO"
 
               echo "🐍 Criando ambiente virtual..."
-              python3 -m venv venv
+              python3 -m venv .venv
 
               echo "📦 Instalando dependências..."
-              source venv/bin/activate
+              source .venv/bin/activate
               pip install --upgrade pip
               pip install -r requirements.txt
 
@@ -58,7 +58,7 @@ jobs:
               git reset --hard origin/main
 
               echo "📦 Atualizando dependências..."
-              source venv/bin/activate
+              source .venv/bin/activate
               pip install -r requirements.txt
 
               echo "🔐 Gerando arquivo .env"
