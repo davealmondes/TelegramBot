@@ -32,6 +32,7 @@ from ponto_handler import (
     gerar_planilha_acoes,
     info_planilha,
     valor_campo,
+    recalcular_horas,
 )
 from utils import limite, salvar_alteracoes
 
@@ -85,7 +86,7 @@ def main() -> None:
             ],
         },
         fallbacks=[
-            CallbackQueryHandler(encerrar_edicao_ponto, pattern=f"^{END}|{CANCELAR}$"),
+            CallbackQueryHandler(encerrar_edicao_ponto, pattern=f"^{END}|{CANCELAR}|{LIMPAR_DIA}$"),
             CommandHandler("cancelar", encerrar),
         ],
         map_to_parent={END: SELECAO_MENU_PONTO},
@@ -100,6 +101,7 @@ def main() -> None:
         CallbackQueryHandler(gerar_planilha_acoes, pattern=f"^{GERAR_PLANILHA}$"),
         CallbackQueryHandler(baixar,             pattern=f"^{BAIXAR_PLANILHA}$"),
         CallbackQueryHandler(gerar_dia,          pattern=f"^{GERAR_DIA}$"),
+        CallbackQueryHandler(recalcular_horas,   pattern=f"^{RECALCULAR}$"),
         ponto_add_conv,
     ]
 
@@ -142,7 +144,7 @@ def main() -> None:
         webhook_url=os.getenv("WEBHOOK_URL"),
     )
 
-    #application.run_polling() --- Para desenvolvimento local, sem necessidade de webhook
+    #application.run_polling() # --- Para desenvolvimento local, sem necessidade de webhook
 
 
 if __name__ == "__main__":

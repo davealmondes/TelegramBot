@@ -126,6 +126,14 @@ class Database:
                 (usuario_id,),
             )
 
+    def set_horas_devidas(self, usuario_id: int, horas: float) -> None:
+        """Define as horas devidas do usuário para um valor específico."""
+        with self._conn() as conn:
+            conn.execute(
+                "UPDATE usuarios SET horas_devidas = MAX(?, 0) WHERE id = ?",
+                (horas, usuario_id),
+            )
+
     # ------------------------------------------------------------------
     # Ponto
     # ------------------------------------------------------------------
@@ -192,6 +200,22 @@ class Database:
             conn.execute(
                 "UPDATE usuarios SET horas_devidas = MAX(horas_devidas, 0) + ? WHERE id = ?",
                 (horas_debito, usuario_id),
+            )
+
+    def reset_contabilizado_mes(self, usuario_id: int, mes_ano: str) -> None:
+        """Reseta a flag de contabilizado para todos os pontos de um mês (MM-YYYY)."""
+        with self._conn() as conn:
+            conn.execute(
+                "UPDATE ponto SET contabilizado = 0 WHERE usuario_id = ? AND strftime('%m-%Y', data) = ?",
+                (usuario_id, mes_ano),
+            )
+
+    def delete_ponto(self, usuario_id: int, data: str) -> None:
+        """Remove o registro de ponto para um dia específico."""
+        with self._conn() as conn:
+            conn.execute(
+                "DELETE FROM ponto WHERE usuario_id = ? AND data = ?",
+                (usuario_id, data),
             )
 
     # ------------------------------------------------------------------

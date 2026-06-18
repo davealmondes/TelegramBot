@@ -283,6 +283,7 @@ async def info_planilha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             InlineKeyboardButton("Gerar Planilha", callback_data=str(GERAR_PLANILHA)),
             InlineKeyboardButton("Baixar Planilha", callback_data=str(BAIXAR_PLANILHA)),
         ],
+        [InlineKeyboardButton("Recalcular Horas Devidas", callback_data=str(RECALCULAR))],
         [InlineKeyboardButton("Voltar", callback_data=str(END))],
     ]
     markup = InlineKeyboardMarkup(buttons)
@@ -294,6 +295,18 @@ async def info_planilha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             await update.callback_query.edit_message_text(texto, reply_markup=markup, parse_mode="Markdown")
         )
     return SELECAO_MENU_PONTO
+
+
+async def recalcular_horas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Zera a dívida do usuário e reseta os flags do mês selecionado."""
+    usuario_id = _usuario_id(update)
+    mes_str    = context.user_data[MES]
+    
+    db.set_horas_devidas(usuario_id, 0.0)
+    db.reset_contabilizado_mes(usuario_id, mes_str)
+    
+    context.user_data[TEXTO] = "✅ Horas devidas recalculadas para o mês atual."
+    return await info_planilha(update, context)
 
 
 # ---------------------------------------------------------------------------
@@ -369,6 +382,9 @@ async def campo_ponto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             InlineKeyboardButton("Observação",    callback_data=str(OBSERVACAO)),
         ],
         [
+            InlineKeyboardButton("Limpar Dia",    callback_data=str(LIMPAR_DIA)),
+        ],
+        [
             InlineKeyboardButton("Cancelar",  callback_data=str(CANCELAR)),
             InlineKeyboardButton("Concluir",  callback_data=str(END)),
         ],
@@ -392,6 +408,17 @@ async def encerrar_edicao_ponto(update: Update, context: ContextTypes.DEFAULT_TY
     if data_cb == str(CANCELAR):
         context.user_data[CAMPOS] = {}
         context.user_data[TEXTO] = "Edição cancelada."
+        await info_planilha(update, context)
+        return END
+
+    if data_cb == str(LIMPAR_DIA):
+        mes, ano = _parse_mes(context)
+        dia     = int(context.user_data[DIA])
+        data_dt = date(ano, mes, dia)
+        db.delete_ponto(usuario_id, data_dt.strftime("%Y-%m-%d"))
+        
+        context.user_data[CAMPOS] = {}
+        context.user_data[TEXTO] = "✅ Apontamento do dia apagado."
         await info_planilha(update, context)
         return END
 
@@ -447,17 +474,22 @@ async def gerar(
         extra_max,
     ) = _config_jornada()
     total_dias = calendar.monthrange(ano, mes)[1]
-    dias_para_gerar = [
+    dias_faltando_no_mes = [
         date(ano, mes, dia)
         for dia in range(1, total_dias + 1)
-        if (incluir_futuros or date(ano, mes, dia) <= hoje)
-        and date(ano, mes, dia).weekday() < 5
+        if date(ano, mes, dia).weekday() < 5
         and date(ano, mes, dia).isoformat() not in datas_com_ponto
         and date(ano, mes, dia).isoformat() not in datas_nao_uteis_manuais
         and not _nome_feriado(date(ano, mes, dia), feriados)
     ]
+    
+    dias_para_gerar = [
+        d for d in dias_faltando_no_mes
+        if incluir_futuros or d <= hoje
+    ]
+    
     horas_devidas  = db.get_horas_devidas(usuario_id)
-    debito_por_dia = horas_devidas / len(dias_para_gerar) if dias_para_gerar else 0.0
+    debito_por_dia = horas_devidas / len(dias_faltando_no_mes) if dias_faltando_no_mes else 0.0
 
     for dia in range(1, total_dias + 1):
         data_atual = date(ano, mes, dia)

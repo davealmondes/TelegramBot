@@ -24,6 +24,9 @@ from telegram.ext import ConversationHandler
     PREENCHER_AUTO,     # Preencher dia atual automaticamente no lançamento manual
 ) = map(chr, range(3, 12))
 
+LIMPAR_DIA = chr(28)
+RECALCULAR = chr(29)
+
 # Marcador de fim de conversa
 END = ConversationHandler.END
 
