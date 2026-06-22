@@ -75,7 +75,7 @@ def main() -> None:
             SELECIONANDO_CAMPO: [
                 CallbackQueryHandler(
                     valor_campo,
-                    pattern=f"^(?!{END}|{CANCELAR}).*$",
+                    pattern=f"^(?!{END}|{CANCELAR}|{LIMPAR_DIA}).*$",
                 )
             ],
             DIGITANDO: [
@@ -144,7 +144,7 @@ def main() -> None:
         webhook_url=os.getenv("WEBHOOK_URL"),
     )
 
-    #application.run_polling() # --- Para desenvolvimento local, sem necessidade de webhook
+    # application.run_polling() # --- Para desenvolvimento local, sem necessidade de webhook
 
 
 if __name__ == "__main__":

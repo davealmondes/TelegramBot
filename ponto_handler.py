@@ -278,6 +278,10 @@ async def info_planilha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         f"Horas extras: {_fmt(horas_extras)}\n"
     )
 
+    texto_extra = context.user_data.pop(TEXTO, None)
+    if texto_extra:
+        texto = f"{texto_extra}\n\n{texto}"
+
     buttons = [
         [
             InlineKeyboardButton("Gerar Planilha", callback_data=str(GERAR_PLANILHA)),
@@ -298,14 +302,27 @@ async def info_planilha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 
 async def recalcular_horas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Zera a dívida do usuário e reseta os flags do mês selecionado."""
+    """Recalcula o saldo de horas do mês, abatendo extras de débitos."""
     usuario_id = _usuario_id(update)
     mes_str    = context.user_data[MES]
     
-    db.set_horas_devidas(usuario_id, 0.0)
-    db.reset_contabilizado_mes(usuario_id, mes_str)
+    pontos = db.get_pontos(usuario_id, mes_str)
+    (carga_horaria, almoco_incluso, almoco_padrao, _, _) = _config_jornada()
+    horas_esperadas_dia = _horas_esperadas_dia(carga_horaria, almoco_incluso, almoco_padrao)
     
-    context.user_data[TEXTO] = "✅ Horas devidas recalculadas para o mês atual."
+    saldo_total = 0.0
+    for _, r in pontos.iterrows():
+        horas = calcular_horas_trabalhadas(r["entrada"], r["inicio_almoco"], r["fim_almoco"], r["saida"])
+        if horas > 0.0:
+            saldo_total += (horas_esperadas_dia - horas)
+            
+    novo_debito = max(0.0, saldo_total)
+    db.set_horas_devidas(usuario_id, novo_debito)
+    
+    with db._conn() as conn:
+        conn.execute("UPDATE ponto SET contabilizado = 1 WHERE usuario_id = ? AND strftime('%m-%Y', data) = ?", (usuario_id, mes_str))
+    
+    context.user_data[TEXTO] = "✅ Horas devidas recalculadas com sucesso."
     return await info_planilha(update, context)
 
 
@@ -483,46 +500,90 @@ async def gerar(
         and not _nome_feriado(date(ano, mes, dia), feriados)
     ]
     
-    dias_para_gerar = [
-        d for d in dias_faltando_no_mes
-        if incluir_futuros or d <= hoje
-    ]
-    
-    horas_devidas  = db.get_horas_devidas(usuario_id)
-    debito_por_dia = horas_devidas / len(dias_faltando_no_mes) if dias_faltando_no_mes else 0.0
+    semanas_do_mes = sorted(list(set(
+        date(ano, mes, dia).isocalendar()[1] for dia in range(1, total_dias + 1)
+    )))
 
-    for dia in range(1, total_dias + 1):
-        data_atual = date(ano, mes, dia)
+    debito_acumulado = 0.0
 
-        # Pula dias futuros (a menos que explicitamente solicitado)
-        if not incluir_futuros and data_atual > hoje:
-            break
+    for semana in semanas_do_mes:
+        pontos_semana = pontos_existentes[
+            pontos_existentes["data"].apply(lambda d: date.fromisoformat(d).isocalendar()[1] == semana)
+        ]
+        
+        saldo_semana = 0.0
+        for _, r in pontos_semana.iterrows():
+            horas = calcular_horas_trabalhadas(r["entrada"], r["inicio_almoco"], r["fim_almoco"], r["saida"])
+            if horas > 0.0:
+                saldo_semana += (_horas_esperadas_dia(carga_horaria, almoco_incluso_na_carga, _almoco_padrao_horas) - horas)
+                
+        debito_acumulado += saldo_semana
 
-        data_str = data_atual.strftime("%Y-%m-%d")
-
-        if data_str in datas_com_ponto:
-            continue
-
-        if data_atual.weekday() >= 5:
-            # Fim de semana — insere sem marcações
-            db.insert_ponto(usuario_id, data_str, None, None, None, None, None)
-            continue
-
-        feriado_nome = _nome_feriado(data_atual, feriados)
-        if feriado_nome:
-            db.insert_ponto(usuario_id, data_str, None, None, None, None, feriado_nome)
-            continue
-
-        # Dia útil sem ponto — gera marcações realistas
-        entrada, inicio_alm, fim_alm, saida = gerar_marcacoes(
-            data_atual,
-            debito_horas=debito_por_dia,
-            carga_horaria_horas=carga_horaria,
-            almoco_incluso_na_carga=almoco_incluso_na_carga,
-            hora_extra_minutos=(extra_min, extra_max),
-        )
-        db.insert_ponto(usuario_id, data_str, entrada, inicio_alm, fim_alm, saida, None)
-        db.update_horas_devidas(usuario_id, -debito_por_dia)
+        dias_uteis_faltando_semana = [d for d in dias_faltando_no_mes if d.isocalendar()[1] == semana]
+        
+        if len(dias_uteis_faltando_semana) > 0 and debito_acumulado > 0:
+            debito_por_dia = debito_acumulado / len(dias_uteis_faltando_semana)
+        else:
+            debito_por_dia = 0.0
+            
+        dias_uteis_para_gerar_semana = [
+            d for d in dias_uteis_faltando_semana if incluir_futuros or d < hoje
+        ]
+        
+        dias_da_semana = [
+            date(ano, mes, dia) for dia in range(1, total_dias + 1) 
+            if date(ano, mes, dia).isocalendar()[1] == semana
+        ]
+        
+        for data_atual in dias_da_semana:
+            if not incluir_futuros and data_atual >= hoje:
+                continue
+            
+            data_str = data_atual.strftime("%Y-%m-%d")
+            
+            if data_str in datas_com_ponto:
+                continue
+                
+            if data_atual.weekday() >= 5:
+                db.insert_ponto(usuario_id, data_str, None, None, None, None, None)
+                continue
+                
+            feriado_nome = _nome_feriado(data_atual, feriados)
+            if feriado_nome:
+                db.insert_ponto(usuario_id, data_str, None, None, None, None, feriado_nome)
+                continue
+                
+            if data_atual.isoformat() in datas_nao_uteis_manuais:
+                continue
+                
+            if data_atual in dias_uteis_para_gerar_semana:
+                if debito_por_dia > 2.0:
+                    ex_min, ex_max = 0, 0
+                else:
+                    ex_min, ex_max = extra_min, extra_max
+                    
+                entrada, inicio_alm, fim_alm, saida = gerar_marcacoes(
+                    data_atual,
+                    debito_horas=debito_por_dia,
+                    carga_horaria_horas=carga_horaria,
+                    almoco_incluso_na_carga=almoco_incluso_na_carga,
+                    hora_extra_minutos=(ex_min, ex_max),
+                )
+                db.insert_ponto(usuario_id, data_str, entrada, inicio_alm, fim_alm, saida, None)
+                
+        if debito_acumulado > 0:
+            debito_acumulado -= debito_por_dia * len(dias_uteis_para_gerar_semana)
+            
+    pontos_finais = db.get_pontos(usuario_id, mes_str)
+    saldo_total = 0.0
+    for _, r in pontos_finais.iterrows():
+        horas = calcular_horas_trabalhadas(r["entrada"], r["inicio_almoco"], r["fim_almoco"], r["saida"])
+        if horas > 0.0:
+            saldo_total += (_horas_esperadas_dia(carga_horaria, almoco_incluso_na_carga, _almoco_padrao_horas) - horas)
+            
+    db.set_horas_devidas(usuario_id, max(0.0, saldo_total))
+    with db._conn() as conn:
+        conn.execute("UPDATE ponto SET contabilizado = 1 WHERE usuario_id = ? AND strftime('%m-%Y', data) = ?", (usuario_id, mes_str))
 
     context.user_data[TEXTO] = (
         f"✅ Planilha gerada para {calendar.month_name[mes]} de {ano}"
