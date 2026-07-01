@@ -80,15 +80,14 @@ def gerar_marcacoes(
     carga_horaria_horas    : carga horaria diaria
     almoco_incluso_na_carga: se True, nao soma almoco novamente na saida
     hora_extra_minutos     : intervalo da hora extra aleatoria diaria
-
-    Retorna
+    Retorna
     -------
     (entrada, inicio_almoco, fim_almoco, saida) como strings HH:MM
     """
     base = datetime.combine(data, datetime.min.time())
 
-    # Entrada: 08:00 +/- 20 min
-    entrada_dt = base + timedelta(hours=8, minutes=_rand_minutos(0, 20))
+    # Entrada: 08:00 + (0 a 20 min)
+    entrada_dt = base + timedelta(hours=8, minutes=int(np.random.randint(0, 21)))
 
     # Saida pro almoco: 12:00 +/- 15 min (base fixa)
     almoco_out_dt = base + timedelta(hours=12, minutes=_rand_minutos(0, 15))

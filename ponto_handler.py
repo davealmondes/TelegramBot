@@ -527,7 +527,9 @@ async def gerar(
             debito_por_dia = 0.0
             
         dias_uteis_para_gerar_semana = [
-            d for d in dias_uteis_faltando_semana if incluir_futuros or d < hoje
+            d for d in dias_uteis_faltando_semana 
+            if (not incluir_futuros and d < hoje) or 
+               (incluir_futuros and (d <= hoje or d.isocalendar()[1] == hoje.isocalendar()[1]))
         ]
         
         dias_da_semana = [
@@ -537,6 +539,8 @@ async def gerar(
         
         for data_atual in dias_da_semana:
             if not incluir_futuros and data_atual >= hoje:
+                continue
+            if incluir_futuros and data_atual > hoje and data_atual.isocalendar()[1] != hoje.isocalendar()[1]:
                 continue
             
             data_str = data_atual.strftime("%Y-%m-%d")
@@ -557,17 +561,12 @@ async def gerar(
                 continue
                 
             if data_atual in dias_uteis_para_gerar_semana:
-                if debito_por_dia > 2.0:
-                    ex_min, ex_max = 0, 0
-                else:
-                    ex_min, ex_max = extra_min, extra_max
-                    
                 entrada, inicio_alm, fim_alm, saida = gerar_marcacoes(
                     data_atual,
                     debito_horas=debito_por_dia,
                     carga_horaria_horas=carga_horaria,
                     almoco_incluso_na_carga=almoco_incluso_na_carga,
-                    hora_extra_minutos=(ex_min, ex_max),
+                    hora_extra_minutos=(30, 60),
                 )
                 db.insert_ponto(usuario_id, data_str, entrada, inicio_alm, fim_alm, saida, None)
                 
